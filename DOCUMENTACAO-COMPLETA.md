@@ -1,7 +1,6 @@
 # Plugin Ferramentas Upload - Documentação Completa
 
 **Desenvolvido por:**
-- Adryanno
 - Augusto  
 - Nicolas Cage
 
