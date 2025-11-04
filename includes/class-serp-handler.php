@@ -54,8 +54,17 @@ class Ferramentas_Upload_SERP_Handler {
         if (!function_exists('is_plugin_active')) {
             require_once ABSPATH . 'wp-admin/includes/plugin.php';
         }
-        
-        if (!is_plugin_active('wordpress-seo/wp-seo.php') && !is_plugin_active('wordpress-seo-premium/wp-seo-premium.php')) {
+
+        $yoast_active = (
+            is_plugin_active('wordpress-seo/wp-seo.php') ||
+            is_plugin_active('wordpress-seo-premium/wp-seo-premium.php') ||
+            // Fallback para versões recentes do Yoast (v24+) ou ambientes onde a checagem por slug falhe
+            defined('WPSEO_VERSION') ||
+            class_exists('WPSEO_Meta') ||
+            class_exists('Yoast\\WP\\SEO\\Main')
+        );
+
+        if (!$yoast_active) {
             $this->show_error(sprintf(
                 __('Erro: O plugin %s precisa estar ativo para executar esta ação.', FU_TEXT_DOMAIN),
                 '<strong>Yoast SEO</strong>'

@@ -201,7 +201,14 @@ class Ferramentas_Upload_Admin_Page {
             require_once ABSPATH . 'wp-admin/includes/plugin.php';
         }
         
-        $yoast_active = is_plugin_active('wordpress-seo/wp-seo.php') || is_plugin_active('wordpress-seo-premium/wp-seo-premium.php');
+        $yoast_active = (
+            is_plugin_active('wordpress-seo/wp-seo.php') ||
+            is_plugin_active('wordpress-seo-premium/wp-seo-premium.php') ||
+            // Fallback para versões recentes do Yoast (v24+) ou cenários em que a função acima falhe
+            defined('WPSEO_VERSION') ||
+            class_exists('WPSEO_Meta') ||
+            class_exists('Yoast\\WP\\SEO\\Main')
+        );
         ?>
         <div class="fu-content-header">
             <h2 class="fu-content-title"><?php esc_html_e('Atualizar Título e Descrição SEO (Yoast)', 'ferramentas-upload'); ?></h2>
