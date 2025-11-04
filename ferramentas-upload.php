@@ -21,8 +21,10 @@ define('FU_PLUGIN_PATH', plugin_dir_path(__FILE__));
 // Carrega arquivo de debug (remover após resolver problemas)
 require_once FU_PLUGIN_PATH . 'debug-log.php';
 
-// Carrega arquivo de teste de exportação (remover após resolver problemas)
-require_once FU_PLUGIN_PATH . 'teste-exportacao.php';
+// Carrega arquivo de teste de exportação somente se existir (evita erro fatal em produção)
+if (file_exists(FU_PLUGIN_PATH . 'teste-exportacao.php')) {
+    require_once FU_PLUGIN_PATH . 'teste-exportacao.php';
+}
 
 // Carrega o arquivo principal do plugin
 require_once FU_PLUGIN_PATH . 'includes/class-plugin-loader.php';
