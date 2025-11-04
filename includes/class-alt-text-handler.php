@@ -290,7 +290,8 @@ class Ferramentas_Upload_Alt_Text_Handler {
             $original_img_tag = $img_tag;
             
             if (preg_match('/alt=/i', $img_tag)) {
-                $img_tag = preg_replace('/alt=(["\'])(?:[^"\\']*)?\1/i', 'alt="' . esc_attr($alt_text) . '"', $img_tag, 1);
+                // Substitui o atributo alt existente (regex segura com aspas simples ou duplas)
+                $img_tag = preg_replace("/\\balt\\s*=\\s*(['\"]).*?\\1/i", 'alt="' . esc_attr($alt_text) . '"', $img_tag, 1);
             } else {
                 $img_tag = str_replace('<img ', '<img alt="' . esc_attr($alt_text) . '" ', $img_tag);
             }
