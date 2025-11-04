@@ -263,7 +263,7 @@ class Ferramentas_Upload_Alt_Text_Handler {
             $count = 0;
 
             // Atualiza imagens com classe wp-image-ID
-            $pattern_wp_class = '/<img[^>]*class=(["\'])(?:[^"\\']*\s)?wp-image-' . intval($attachment_id) . '(?:\s[^"\\']*)?\1[^>]*>/i';
+            $pattern_wp_class = '/<img[^>]*class=(?:"|\')[^>]*wp-image-' . intval($attachment_id) . '[^>]*>/i';
             if (preg_match_all($pattern_wp_class, $content, $matches_wp_class)) {
                 foreach ($matches_wp_class[0] as $img_tag) {
                     $count += $this->update_img_tag($img_tag, $alt_text, $new_content, $updated_in_this_post);
