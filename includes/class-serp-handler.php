@@ -162,7 +162,7 @@ class Ferramentas_Upload_SERP_Handler {
     }
 
     private function update_post_meta_data($url, $new_title, $new_desc) {
-        $post_id = url_to_postid($url);
+        $post_id = $this->get_post_id_from_url($url);
 
         if ($post_id > 0) {
             $yoast_title_key = '_yoast_wpseo_title';
@@ -196,6 +196,116 @@ class Ferramentas_Upload_SERP_Handler {
                 esc_url($url)
             );
         }
+    }
+
+    /**
+     * Busca o ID do post/page pela URL, incluindo páginas, homepage e outros tipos de conteúdo
+     */
+    private function get_post_id_from_url($url) {
+        // Remove query strings e fragmentos da URL para busca mais precisa
+        $clean_url = preg_replace('/[?#].*$/', '', $url);
+        
+        // Primeiro tenta usar url_to_postid (funciona para a maioria dos casos)
+        $post_id = url_to_postid($clean_url);
+        
+        if ($post_id > 0) {
+            return $post_id;
+        }
+
+        // Extrai o path da URL e compara com a homepage
+        $parsed_url = parse_url($clean_url);
+        $home_url_parsed = parse_url(home_url());
+        
+        // Normaliza URLs removendo protocolo e domínio para comparação
+        $url_normalized = isset($parsed_url['path']) ? trim($parsed_url['path'], '/') : '';
+        $home_path_normalized = isset($home_url_parsed['path']) ? trim($home_url_parsed['path'], '/') : '';
+        
+        // Se a URL normalizada for igual à homepage ou estiver vazia, pode ser a homepage
+        if (empty($url_normalized) || $url_normalized === $home_path_normalized) {
+            // Verifica se a homepage é uma página estática
+            $home_page_id = get_option('page_on_front');
+            if ($home_page_id) {
+                return (int) $home_page_id;
+            }
+            // Se não for página estática, retorna 0 (homepage com posts recentes não tem ID específico)
+            // Mas podemos usar o ID da página de posts se configurada
+            $posts_page_id = get_option('page_for_posts');
+            if ($posts_page_id) {
+                return (int) $posts_page_id;
+            }
+            return 0;
+        }
+        
+        $path = $url_normalized;
+
+        // Remove a base do WordPress se existir
+        $home_path = parse_url(home_url(), PHP_URL_PATH);
+        if ($home_path && strpos($path, trim($home_path, '/')) === 0) {
+            $path = substr($path, strlen(trim($home_path, '/')));
+            $path = trim($path, '/');
+        }
+
+        // Busca por slug em todos os tipos de post (posts, pages, e custom post types)
+        $post_types = get_post_types(array('public' => true), 'names');
+        
+        // Remove attachment do array para evitar falsos positivos
+        $post_types = array_diff($post_types, array('attachment'));
+        
+        // Primeiro tenta buscar pelo path completo (útil para páginas hierárquicas)
+        $args = array(
+            'name' => $path,
+            'post_type' => $post_types,
+            'post_status' => 'publish',
+            'posts_per_page' => 1,
+            'fields' => 'ids'
+        );
+        
+        $query = new WP_Query($args);
+        
+        if ($query->have_posts()) {
+            $post_id = $query->posts[0];
+            wp_reset_postdata();
+            return (int) $post_id;
+        }
+        
+        // Se não encontrou pelo path completo, tenta apenas o último segmento (slug final)
+        $slug = basename($path);
+        if ($slug !== $path) {
+            $args = array(
+                'name' => $slug,
+                'post_type' => $post_types,
+                'post_status' => 'publish',
+                'posts_per_page' => 1,
+                'fields' => 'ids'
+            );
+            
+            $query = new WP_Query($args);
+            
+            if ($query->have_posts()) {
+                $post_id = $query->posts[0];
+                wp_reset_postdata();
+                return (int) $post_id;
+            }
+        }
+        
+        // Como último recurso, busca direto no banco por slug
+        // Isso pode ser útil para URLs com estrutura customizada
+        global $wpdb;
+        
+        $post_id = $wpdb->get_var($wpdb->prepare(
+            "SELECT ID FROM {$wpdb->posts} 
+            WHERE post_name = %s 
+            AND post_status = 'publish' 
+            AND post_type IN ('" . implode("','", array_map('esc_sql', $post_types)) . "')
+            LIMIT 1",
+            $slug
+        ));
+        
+        if ($post_id) {
+            return (int) $post_id;
+        }
+
+        return 0;
     }
 
     private function show_results() {
