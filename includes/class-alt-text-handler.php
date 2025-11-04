@@ -310,7 +310,7 @@ class Ferramentas_Upload_Alt_Text_Handler {
 
     private function show_results() {
         try {
-            echo '<div class="notice notice-success is-dismissible"><p>';
+            echo '<div class="fu-notice success"><p>';
             printf(
                 esc_html(_n(
                     'Processamento concluído! %d imagem atualizada na biblioteca.',
@@ -350,7 +350,7 @@ class Ferramentas_Upload_Alt_Text_Handler {
             echo '</p></div>';
 
             if (!empty($this->errors)) {
-                echo '<div class="notice notice-warning is-dismissible"><p><strong>' .
+                echo '<div class="fu-notice warning"><p><strong>' .
                      esc_html__('Detalhes dos erros/avisos encontrados:', FU_TEXT_DOMAIN) .
                      '</strong></p><ul>';
                 foreach ($this->errors as $error) {
@@ -359,16 +359,16 @@ class Ferramentas_Upload_Alt_Text_Handler {
                 echo '</ul></div>';
             }
         } catch (Exception $e) {
-            echo '<div class="notice notice-error is-dismissible"><p>' . esc_html__('Erro ao exibir resultados: ', FU_TEXT_DOMAIN) . esc_html($e->getMessage()) . '</p></div>';
+            echo '<div class="fu-notice error"><p>' . esc_html__('Erro ao exibir resultados: ', FU_TEXT_DOMAIN) . esc_html($e->getMessage()) . '</p></div>';
         }
     }
 
     private function show_error($message) {
         try {
-            echo '<div class="notice notice-error is-dismissible"><p>' . esc_html($message) . '</p></div>';
+            echo '<div class="fu-notice error"><p>' . esc_html($message) . '</p></div>';
         } catch (Exception $e) {
             // Fallback simples se houver erro
-            echo '<div class="notice notice-error"><p>Erro no sistema</p></div>';
+            echo '<div class="fu-notice error"><p>Erro no sistema</p></div>';
         }
     }
 

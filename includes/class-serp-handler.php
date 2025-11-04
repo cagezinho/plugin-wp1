@@ -191,7 +191,7 @@ class Ferramentas_Upload_SERP_Handler {
 
     private function show_results() {
         if ($this->success_count > 0) {
-            echo '<div class="notice notice-success is-dismissible"><p>' .
+            echo '<div class="fu-notice success"><p>' .
                  sprintf(
                      esc_html__('%d registro(s) de SERP atualizado(s) com sucesso.', FU_TEXT_DOMAIN),
                      $this->success_count
@@ -199,7 +199,7 @@ class Ferramentas_Upload_SERP_Handler {
                  '</p></div>';
         } else {
             if (empty($this->error_log) && empty($this->warning_log)) {
-                echo '<div class="notice notice-warning is-dismissible"><p>' .
+                echo '<div class="fu-notice warning"><p>' .
                      esc_html__('Nenhum registro de SERP foi atualizado (nenhum dado válido encontrado no CSV ou posts correspondentes).', FU_TEXT_DOMAIN) .
                      '</p></div>';
             }
@@ -211,7 +211,7 @@ class Ferramentas_Upload_SERP_Handler {
 
     private function show_warnings() {
         if (!empty($this->warning_log)) {
-            echo '<div class="notice notice-warning is-dismissible"><p><strong>' .
+            echo '<div class="fu-notice warning"><p><strong>' .
                  esc_html__('Avisos encontrados:', FU_TEXT_DOMAIN) .
                  '</strong></p><ul>';
             foreach ($this->warning_log as $warning) {
@@ -223,7 +223,7 @@ class Ferramentas_Upload_SERP_Handler {
 
     private function show_errors() {
         if (!empty($this->error_log)) {
-            echo '<div class="notice notice-error is-dismissible"><p><strong>' .
+            echo '<div class="fu-notice error"><p><strong>' .
                  esc_html__('Erros encontrados durante o processamento:', FU_TEXT_DOMAIN) .
                  '</strong></p><ul>';
             foreach ($this->error_log as $error) {
@@ -234,7 +234,7 @@ class Ferramentas_Upload_SERP_Handler {
     }
 
     private function show_error($message) {
-        echo '<div class="notice notice-error is-dismissible"><p>' . wp_kses_post($message) . '</p></div>';
+        echo '<div class="fu-notice error"><p>' . wp_kses_post($message) . '</p></div>';
     }
 
     private function cleanup($file_path) {
