@@ -106,6 +106,7 @@ class Ferramentas_Upload_Admin_Page {
         $this->render_tab('export_posts', __('Exportar Posts', 'ferramentas-upload'));
         $this->render_tab('trash_posts', __('Mover para Lixeira', 'ferramentas-upload'));
         $this->render_tab('recategorize_posts', __('Recategorizar Posts', 'ferramentas-upload'));
+        $this->render_tab('faq', __('FAQ Estruturado', 'ferramentas-upload'));
         echo '</ul>';
         echo '</div>';
         echo '<div class="fu-content">';
@@ -140,6 +141,9 @@ class Ferramentas_Upload_Admin_Page {
                 break;
             case 'recategorize_posts':
                 $this->render_recategorize_posts_tab();
+                break;
+            case 'faq':
+                $this->render_faq_tab();
                 break;
         }
     }
@@ -437,6 +441,352 @@ class Ferramentas_Upload_Admin_Page {
                 </a>
             </div>
         </div>
+        <?php
+    }
+
+    private function render_faq_tab() {
+        // Verifica se as configurações foram salvas
+        $settings_saved = isset($_GET['settings_saved']) && $_GET['settings_saved'] == '1';
+        
+        // Obtém valores salvos
+        $api_key = get_option('fu_faq_api_key', '');
+        $prompt = get_option('fu_faq_prompt', '');
+        
+        // Enfileira scripts necessários
+        wp_enqueue_script('jquery');
+        
+        // Adiciona ajaxurl se não estiver definido
+        ?>
+        <script type="text/javascript">
+        var ajaxurl = ajaxurl || '<?php echo esc_js(admin_url('admin-ajax.php')); ?>';
+        </script>
+        <?php
+        <div class="fu-content-header">
+            <h2 class="fu-content-title"><?php esc_html_e('FAQ Estruturado com IA', 'ferramentas-upload'); ?></h2>
+            <p class="fu-content-description"><?php esc_html_e('Gere automaticamente dados estruturados de FAQ para seus posts usando IA Studio.', 'ferramentas-upload'); ?></p>
+        </div>
+
+        <?php if ($settings_saved): ?>
+            <div class="fu-notice success">
+                <p><?php esc_html_e('Configurações salvas com sucesso!', 'ferramentas-upload'); ?></p>
+            </div>
+        <?php endif; ?>
+
+        <div class="fu-form">
+            <div class="fu-form-section">
+                <h4><?php esc_html_e('Configurações da API', 'ferramentas-upload'); ?></h4>
+                <p class="fu-content-description">
+                    <?php esc_html_e('Configure sua chave de API do IA Studio e o prompt personalizado para geração de FAQ.', 'ferramentas-upload'); ?>
+                </p>
+
+                <form method="post" class="fu-form">
+                    <input type="hidden" name="<?php echo esc_attr(FU_PREFIX . 'action'); ?>" value="save_faq_settings">
+                    <?php wp_nonce_field(FU_FAQ_NONCE_ACTION, FU_FAQ_NONCE_FIELD); ?>
+                    
+                    <div class="fu-form-group">
+                        <label for="fu_faq_api_key" class="fu-form-label">
+                            <?php esc_html_e('Chave de API do IA Studio', 'ferramentas-upload'); ?>
+                        </label>
+                        <input 
+                            type="text" 
+                            id="fu_faq_api_key" 
+                            name="fu_faq_api_key" 
+                            value="<?php echo esc_attr($api_key); ?>" 
+                            placeholder="<?php esc_attr_e('Cole sua chave de API aqui', 'ferramentas-upload'); ?>"
+                            class="fu-form-input"
+                        >
+                        <p class="fu-form-description">
+                            <?php esc_html_e('Insira sua chave de API do IA Studio. Cada usuário deve adicionar sua própria chave.', 'ferramentas-upload'); ?>
+                        </p>
+                    </div>
+
+                    <div class="fu-form-group">
+                        <label for="fu_faq_prompt" class="fu-form-label">
+                            <?php esc_html_e('Prompt Personalizado', 'ferramentas-upload'); ?>
+                        </label>
+                        <textarea 
+                            id="fu_faq_prompt" 
+                            name="fu_faq_prompt" 
+                            rows="6" 
+                            class="fu-form-input"
+                            placeholder="<?php esc_attr_e('Deixe em branco para usar o prompt padrão. O prompt será enviado junto com o título e conteúdo do post.', 'ferramentas-upload'); ?>"
+                        ><?php echo esc_textarea($prompt); ?></textarea>
+                        <p class="fu-form-description">
+                            <?php esc_html_e('Configure um prompt personalizado para orientar a geração de FAQ. Se deixar em branco, será usado um prompt padrão otimizado.', 'ferramentas-upload'); ?>
+                        </p>
+                    </div>
+
+                    <button type="submit" class="fu-button fu-button-primary">
+                        <?php esc_html_e('Salvar Configurações', 'ferramentas-upload'); ?>
+                    </button>
+                </form>
+            </div>
+
+            <div class="fu-form-section" style="margin-top: 30px;">
+                <h4><?php esc_html_e('Gerar FAQ para Post', 'ferramentas-upload'); ?></h4>
+                <p class="fu-content-description">
+                    <?php esc_html_e('Selecione um post para gerar FAQ automaticamente. Você poderá revisar antes de aplicar.', 'ferramentas-upload'); ?>
+                </p>
+
+                <div class="fu-form-group">
+                    <label for="fu_faq_post_select" class="fu-form-label">
+                        <?php esc_html_e('Selecionar Post', 'ferramentas-upload'); ?>
+                    </label>
+                    <select id="fu_faq_post_select" class="fu-form-input" style="width: 100%;">
+                        <option value=""><?php esc_html_e('-- Selecione um post --', 'ferramentas-upload'); ?></option>
+                        <?php
+                        $posts = get_posts(array(
+                            'post_type' => 'post',
+                            'post_status' => 'publish',
+                            'numberposts' => 100,
+                            'orderby' => 'date',
+                            'order' => 'DESC'
+                        ));
+                        foreach ($posts as $post) {
+                            echo '<option value="' . esc_attr($post->ID) . '">' . esc_html($post->post_title) . ' (ID: ' . $post->ID . ')</option>';
+                        }
+                        ?>
+                    </select>
+                    <p class="fu-form-description">
+                        <?php esc_html_e('Selecione o post para o qual deseja gerar FAQ.', 'ferramentas-upload'); ?>
+                    </p>
+                </div>
+
+                <button type="button" id="fu_generate_faq_btn" class="fu-button fu-button-primary" disabled>
+                    <?php esc_html_e('Gerar FAQ', 'ferramentas-upload'); ?>
+                </button>
+
+                <div id="fu_faq_loading" style="display: none; margin-top: 20px;">
+                    <p><?php esc_html_e('Gerando FAQ... Aguarde.', 'ferramentas-upload'); ?></p>
+                </div>
+
+                <div id="fu_faq_review_panel" style="display: none; margin-top: 30px;">
+                    <h4><?php esc_html_e('Revisão do FAQ Gerado', 'ferramentas-upload'); ?></h4>
+                    <p class="fu-content-description">
+                        <?php esc_html_e('Revise as perguntas e respostas geradas. Você pode editar antes de aplicar.', 'ferramentas-upload'); ?>
+                    </p>
+                    
+                    <div id="fu_faq_items_container" style="margin: 20px 0;">
+                        <!-- FAQ items serão inseridos aqui via JavaScript -->
+                    </div>
+
+                    <div class="fu-form-notice">
+                        <p><strong><?php esc_html_e('Importante:', 'ferramentas-upload'); ?></strong></p>
+                        <ul>
+                            <li><?php esc_html_e('O FAQ será adicionado como dados estruturados (Schema.org) no post.', 'ferramentas-upload'); ?></li>
+                            <li><?php esc_html_e('Os dados estruturados aparecerão automaticamente no código HTML do post.', 'ferramentas-upload'); ?></li>
+                            <li><?php esc_html_e('Você pode editar as perguntas e respostas antes de aplicar.', 'ferramentas-upload'); ?></li>
+                        </ul>
+                    </div>
+
+                    <button type="button" id="fu_apply_faq_btn" class="fu-button fu-button-primary">
+                        <?php esc_html_e('Aplicar FAQ ao Post', 'ferramentas-upload'); ?>
+                    </button>
+                    <button type="button" id="fu_cancel_faq_btn" class="fu-button" style="margin-left: 10px;">
+                        <?php esc_html_e('Cancelar', 'ferramentas-upload'); ?>
+                    </button>
+                </div>
+
+                <div id="fu_faq_success_message" style="display: none; margin-top: 20px;" class="fu-notice success">
+                    <p></p>
+                </div>
+
+                <div id="fu_faq_error_message" style="display: none; margin-top: 20px;" class="fu-notice error">
+                    <p></p>
+                </div>
+            </div>
+        </div>
+
+        <script type="text/javascript">
+        jQuery(document).ready(function($) {
+            var currentPostId = null;
+            var currentFaqData = null;
+
+            // Habilita botão quando post é selecionado
+            $('#fu_faq_post_select').on('change', function() {
+                var postId = $(this).val();
+                $('#fu_generate_faq_btn').prop('disabled', !postId);
+                currentPostId = postId;
+                $('#fu_faq_review_panel').hide();
+                $('#fu_faq_success_message').hide();
+                $('#fu_faq_error_message').hide();
+            });
+
+            // Gera FAQ
+            $('#fu_generate_faq_btn').on('click', function() {
+                if (!currentPostId) {
+                    alert('<?php echo esc_js(__('Por favor, selecione um post.', 'ferramentas-upload')); ?>');
+                    return;
+                }
+
+                $('#fu_faq_loading').show();
+                $('#fu_faq_review_panel').hide();
+                $('#fu_faq_error_message').hide();
+                $('#fu_faq_success_message').hide();
+
+                $.ajax({
+                    url: ajaxurl,
+                    type: 'POST',
+                    data: {
+                        action: 'fu_generate_faq',
+                        post_id: currentPostId,
+                        nonce: '<?php echo wp_create_nonce(FU_FAQ_AJAX_NONCE_ACTION); ?>'
+                    },
+                    success: function(response) {
+                        $('#fu_faq_loading').hide();
+                        
+                        if (response.success) {
+                            currentFaqData = response.data.faq_data;
+                            renderFaqReview(response.data.faq_data);
+                            $('#fu_faq_review_panel').show();
+                        } else {
+                            $('#fu_faq_error_message p').text(response.data.message || '<?php echo esc_js(__('Erro ao gerar FAQ.', 'ferramentas-upload')); ?>');
+                            $('#fu_faq_error_message').show();
+                        }
+                    },
+                    error: function() {
+                        $('#fu_faq_loading').hide();
+                        $('#fu_faq_error_message p').text('<?php echo esc_js(__('Erro ao conectar com o servidor.', 'ferramentas-upload')); ?>');
+                        $('#fu_faq_error_message').show();
+                    }
+                });
+            });
+
+            // Renderiza painel de revisão
+            function renderFaqReview(faqData) {
+                var container = $('#fu_faq_items_container');
+                container.empty();
+
+                if (!faqData || faqData.length === 0) {
+                    container.html('<p><?php echo esc_js(__('Nenhum FAQ gerado.', 'ferramentas-upload')); ?></p>');
+                    return;
+                }
+
+                faqData.forEach(function(item, index) {
+                    var itemHtml = '<div class="fu-faq-item" style="margin-bottom: 20px; padding: 15px; border: 1px solid #ddd; border-radius: 4px;">';
+                    itemHtml += '<div class="fu-form-group">';
+                    itemHtml += '<label><strong><?php echo esc_js(__('Pergunta', 'ferramentas-upload')); ?> ' + (index + 1) + ':</strong></label>';
+                    itemHtml += '<input type="text" class="fu-faq-question fu-form-input" value="' + escapeHtml(item.question || '') + '" data-index="' + index + '" style="width: 100%; margin-top: 5px;">';
+                    itemHtml += '</div>';
+                    itemHtml += '<div class="fu-form-group" style="margin-top: 10px;">';
+                    itemHtml += '<label><strong><?php echo esc_js(__('Resposta', 'ferramentas-upload')); ?>:</strong></label>';
+                    itemHtml += '<textarea class="fu-faq-answer fu-form-input" data-index="' + index + '" rows="4" style="width: 100%; margin-top: 5px;">' + escapeHtml(item.answer || '') + '</textarea>';
+                    itemHtml += '</div>';
+                    itemHtml += '<button type="button" class="fu-remove-faq-item fu-button" style="margin-top: 10px;" data-index="' + index + '"><?php echo esc_js(__('Remover', 'ferramentas-upload')); ?></button>';
+                    itemHtml += '</div>';
+                    container.append(itemHtml);
+                });
+
+                // Adiciona botão para adicionar novo item
+                container.append('<button type="button" id="fu_add_faq_item" class="fu-button" style="margin-top: 10px;"><?php echo esc_js(__('+ Adicionar Pergunta/Resposta', 'ferramentas-upload')); ?></button>');
+
+                // Event listeners
+                $('.fu-faq-question, .fu-faq-answer').on('input', updateFaqData);
+                $('.fu-remove-faq-item').on('click', function() {
+                    var index = $(this).data('index');
+                    removeFaqItem(index);
+                });
+                $('#fu_add_faq_item').on('click', addNewFaqItem);
+            }
+
+            function updateFaqData() {
+                var index = $(this).data('index');
+                if ($(this).hasClass('fu-faq-question')) {
+                    currentFaqData[index].question = $(this).val();
+                } else if ($(this).hasClass('fu-faq-answer')) {
+                    currentFaqData[index].answer = $(this).val();
+                }
+            }
+
+            function removeFaqItem(index) {
+                currentFaqData.splice(index, 1);
+                renderFaqReview(currentFaqData);
+            }
+
+            function addNewFaqItem() {
+                currentFaqData.push({
+                    question: '',
+                    answer: ''
+                });
+                renderFaqReview(currentFaqData);
+            }
+
+            function escapeHtml(text) {
+                var map = {
+                    '&': '&amp;',
+                    '<': '&lt;',
+                    '>': '&gt;',
+                    '"': '&quot;',
+                    "'": '&#039;'
+                };
+                return text.replace(/[&<>"']/g, function(m) { return map[m]; });
+            }
+
+            // Aplica FAQ
+            $('#fu_apply_faq_btn').on('click', function() {
+                if (!currentPostId || !currentFaqData) {
+                    alert('<?php echo esc_js(__('Nenhum FAQ para aplicar.', 'ferramentas-upload')); ?>');
+                    return;
+                }
+
+                // Atualiza dados dos campos editados
+                $('.fu-faq-question, .fu-faq-answer').each(function() {
+                    var index = $(this).data('index');
+                    if ($(this).hasClass('fu-faq-question')) {
+                        currentFaqData[index].question = $(this).val();
+                    } else if ($(this).hasClass('fu-faq-answer')) {
+                        currentFaqData[index].answer = $(this).val();
+                    }
+                });
+
+                // Remove itens vazios
+                currentFaqData = currentFaqData.filter(function(item) {
+                    return item.question && item.answer;
+                });
+
+                if (currentFaqData.length === 0) {
+                    alert('<?php echo esc_js(__('Adicione pelo menos uma pergunta e resposta válida.', 'ferramentas-upload')); ?>');
+                    return;
+                }
+
+                $('#fu_apply_faq_btn').prop('disabled', true).text('<?php echo esc_js(__('Aplicando...', 'ferramentas-upload')); ?>');
+
+                $.ajax({
+                    url: ajaxurl,
+                    type: 'POST',
+                    data: {
+                        action: 'fu_apply_faq',
+                        post_id: currentPostId,
+                        faq_data: JSON.stringify(currentFaqData),
+                        nonce: '<?php echo wp_create_nonce(FU_FAQ_AJAX_NONCE_ACTION); ?>'
+                    },
+                    success: function(response) {
+                        $('#fu_apply_faq_btn').prop('disabled', false).text('<?php echo esc_js(__('Aplicar FAQ ao Post', 'ferramentas-upload')); ?>');
+                        
+                        if (response.success) {
+                            $('#fu_faq_success_message p').text(response.data.message || '<?php echo esc_js(__('FAQ aplicado com sucesso!', 'ferramentas-upload')); ?>');
+                            $('#fu_faq_success_message').show();
+                            $('#fu_faq_review_panel').hide();
+                        } else {
+                            $('#fu_faq_error_message p').text(response.data.message || '<?php echo esc_js(__('Erro ao aplicar FAQ.', 'ferramentas-upload')); ?>');
+                            $('#fu_faq_error_message').show();
+                        }
+                    },
+                    error: function() {
+                        $('#fu_apply_faq_btn').prop('disabled', false).text('<?php echo esc_js(__('Aplicar FAQ ao Post', 'ferramentas-upload')); ?>');
+                        $('#fu_faq_error_message p').text('<?php echo esc_js(__('Erro ao conectar com o servidor.', 'ferramentas-upload')); ?>');
+                        $('#fu_faq_error_message').show();
+                    }
+                });
+            });
+
+            // Cancela revisão
+            $('#fu_cancel_faq_btn').on('click', function() {
+                $('#fu_faq_review_panel').hide();
+                currentFaqData = null;
+            });
+        });
+        </script>
         <?php
     }
 }
