@@ -451,6 +451,7 @@ class Ferramentas_Upload_Admin_Page {
         // Obtém valores salvos
         $api_key = get_option('fu_faq_api_key', '');
         $prompt = get_option('fu_faq_prompt', '');
+        $api_url = get_option('fu_faq_api_url', 'https://api.openai.com/v1/chat/completions');
         
         // Enfileira scripts necessários
         wp_enqueue_script('jquery');
@@ -485,8 +486,25 @@ class Ferramentas_Upload_Admin_Page {
                     <?php wp_nonce_field(FU_FAQ_NONCE_ACTION, FU_FAQ_NONCE_FIELD); ?>
                     
                     <div class="fu-form-group">
+                        <label for="fu_faq_api_url" class="fu-form-label">
+                            <?php esc_html_e('URL da API', 'ferramentas-upload'); ?>
+                        </label>
+                        <input 
+                            type="url" 
+                            id="fu_faq_api_url" 
+                            name="fu_faq_api_url" 
+                            value="<?php echo esc_attr($api_url); ?>" 
+                            placeholder="https://api.openai.com/v1/chat/completions"
+                            class="fu-form-input"
+                        >
+                        <p class="fu-form-description">
+                            <?php esc_html_e('URL do endpoint da API. Padrão: OpenAI. Se usar IA Studio ou outro serviço compatível, altere aqui.', 'ferramentas-upload'); ?>
+                        </p>
+                    </div>
+
+                    <div class="fu-form-group">
                         <label for="fu_faq_api_key" class="fu-form-label">
-                            <?php esc_html_e('Chave de API do IA Studio', 'ferramentas-upload'); ?>
+                            <?php esc_html_e('Chave de API', 'ferramentas-upload'); ?>
                         </label>
                         <input 
                             type="text" 
@@ -497,7 +515,7 @@ class Ferramentas_Upload_Admin_Page {
                             class="fu-form-input"
                         >
                         <p class="fu-form-description">
-                            <?php esc_html_e('Insira sua chave de API do IA Studio. Cada usuário deve adicionar sua própria chave.', 'ferramentas-upload'); ?>
+                            <?php esc_html_e('Insira sua chave de API. Cada usuário deve adicionar sua própria chave.', 'ferramentas-upload'); ?>
                         </p>
                     </div>
 

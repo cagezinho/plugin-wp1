@@ -163,9 +163,11 @@ class Ferramentas_Upload_Loader {
             check_admin_referer(FU_FAQ_NONCE_ACTION, FU_FAQ_NONCE_FIELD);
             $api_key = isset($_POST['fu_faq_api_key']) ? sanitize_text_field($_POST['fu_faq_api_key']) : '';
             $prompt = isset($_POST['fu_faq_prompt']) ? wp_kses_post($_POST['fu_faq_prompt']) : '';
+            $api_url = isset($_POST['fu_faq_api_url']) ? esc_url_raw($_POST['fu_faq_api_url']) : 'https://api.openai.com/v1/chat/completions';
             
             update_option('fu_faq_api_key', $api_key);
             update_option('fu_faq_prompt', $prompt);
+            update_option('fu_faq_api_url', $api_url);
             
             wp_redirect(add_query_arg(array('tab' => 'faq', 'settings_saved' => '1'), admin_url('admin.php?page=' . FU_PAGE_SLUG)));
             exit;

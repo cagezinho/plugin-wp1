@@ -10,11 +10,13 @@ if (!defined('ABSPATH')) {
 class Ferramentas_Upload_FAQ_Handler {
     private $api_key;
     private $prompt;
-    private $api_url = 'https://api.ia.studio/v1/chat/completions'; // URL da API do IA Studio
+    private $api_url;
 
     public function __construct() {
         $this->api_key = get_option('fu_faq_api_key', '');
         $this->prompt = get_option('fu_faq_prompt', '');
+        // URL da API - padrão OpenAI, mas pode ser configurada
+        $this->api_url = get_option('fu_faq_api_url', 'https://api.openai.com/v1/chat/completions');
     }
 
     /**
