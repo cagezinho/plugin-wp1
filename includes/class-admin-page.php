@@ -461,6 +461,7 @@ class Ferramentas_Upload_Admin_Page {
         var ajaxurl = ajaxurl || '<?php echo esc_js(admin_url('admin-ajax.php')); ?>';
         </script>
         <?php
+        ?>
         <div class="fu-content-header">
             <h2 class="fu-content-title"><?php esc_html_e('FAQ Estruturado com IA', 'ferramentas-upload'); ?></h2>
             <p class="fu-content-description"><?php esc_html_e('Gere automaticamente dados estruturados de FAQ para seus posts usando IA Studio.', 'ferramentas-upload'); ?></p>
