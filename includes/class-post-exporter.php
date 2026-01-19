@@ -66,7 +66,11 @@ class Ferramentas_Upload_Post_Exporter {
             'post_html' => __('HTML do Post', FU_TEXT_DOMAIN),
             'author' => __('Autor', FU_TEXT_DOMAIN),
             'publish_date' => __('Data de Publicação', FU_TEXT_DOMAIN),
-            'url' => __('URL', FU_TEXT_DOMAIN)
+            'url' => __('URL', FU_TEXT_DOMAIN),
+            'canonical_url' => __('URL Canônica', FU_TEXT_DOMAIN),
+            'featured_image' => __('Imagem Destacada', FU_TEXT_DOMAIN),
+            'internal_links_count' => __('Contagem de Links Internos', FU_TEXT_DOMAIN),
+            'post_status' => __('Status do Post', FU_TEXT_DOMAIN)
         );
         
         foreach ($this->selected_fields as $field) {
@@ -129,6 +133,18 @@ class Ferramentas_Upload_Post_Exporter {
                     break;
                 case 'url':
                     $row_data[] = get_permalink();
+                    break;
+                case 'canonical_url':
+                    $row_data[] = $this->get_canonical_url($post_id);
+                    break;
+                case 'featured_image':
+                    $row_data[] = $this->get_featured_image_url($post_id);
+                    break;
+                case 'internal_links_count':
+                    $row_data[] = $this->get_internal_links_count($post_id);
+                    break;
+                case 'post_status':
+                    $row_data[] = $this->get_post_status($post_id);
                     break;
                 default:
                     $row_data[] = '';
@@ -262,6 +278,119 @@ class Ferramentas_Upload_Post_Exporter {
             }
             
             return '';
+        } catch (Exception $e) {
+            return '';
+        }
+    }
+    
+    private function get_canonical_url($post_id) {
+        try {
+            // Tenta obter do Yoast SEO primeiro
+            $canonical = get_post_meta($post_id, '_yoast_wpseo_canonical', true);
+            
+            // Se não houver canonical do Yoast, usa a URL do post
+            if (empty($canonical)) {
+                $canonical = get_permalink($post_id);
+            }
+            
+            return esc_url_raw($canonical);
+        } catch (Exception $e) {
+            return get_permalink($post_id);
+        }
+    }
+    
+    private function get_featured_image_url($post_id) {
+        try {
+            $thumbnail_id = get_post_thumbnail_id($post_id);
+            
+            if ($thumbnail_id) {
+                $image_url = wp_get_attachment_image_url($thumbnail_id, 'full');
+                return $image_url ? esc_url_raw($image_url) : '';
+            }
+            
+            return '';
+        } catch (Exception $e) {
+            return '';
+        }
+    }
+    
+    private function get_internal_links_count($post_id) {
+        try {
+            $content = get_post_field('post_content', $post_id);
+            
+            if (empty($content)) {
+                return 0;
+            }
+            
+            // Obtém o domínio do site
+            $site_url = home_url();
+            $parsed_url = parse_url($site_url);
+            $site_domain = isset($parsed_url['host']) ? $parsed_url['host'] : '';
+            
+            if (empty($site_domain)) {
+                return 0;
+            }
+            
+            // Remove o www. para comparação
+            $site_domain = preg_replace('/^www\./', '', $site_domain);
+            
+            // Conta links no conteúdo
+            $internal_links = 0;
+            
+            // Regex para encontrar todos os links <a href="...">
+            preg_match_all('/<a[^>]+href=["\']([^"\']+)["\'][^>]*>/i', $content, $matches);
+            
+            if (!empty($matches[1])) {
+                foreach ($matches[1] as $url) {
+                    // Remove espaços e quebras de linha
+                    $url = trim($url);
+                    
+                    // Ignora links vazios, âncoras (#) e javascript:
+                    if (empty($url) || $url[0] === '#' || strpos($url, 'javascript:') === 0) {
+                        continue;
+                    }
+                    
+                    // Se é um link relativo (começa com /), é interno
+                    if ($url[0] === '/') {
+                        $internal_links++;
+                        continue;
+                    }
+                    
+                    // Parse da URL para verificar o domínio
+                    $parsed_link = parse_url($url);
+                    
+                    if (isset($parsed_link['host'])) {
+                        $link_domain = preg_replace('/^www\./', '', $parsed_link['host']);
+                        
+                        // Compara domínios (case insensitive)
+                        if (strtolower($link_domain) === strtolower($site_domain)) {
+                            $internal_links++;
+                        }
+                    }
+                }
+            }
+            
+            return $internal_links;
+        } catch (Exception $e) {
+            return 0;
+        }
+    }
+    
+    private function get_post_status($post_id) {
+        try {
+            $status = get_post_status($post_id);
+            
+            // Traduz os status mais comuns
+            $status_labels = array(
+                'publish' => __('Publicado', FU_TEXT_DOMAIN),
+                'draft' => __('Rascunho', FU_TEXT_DOMAIN),
+                'pending' => __('Pendente', FU_TEXT_DOMAIN),
+                'private' => __('Privado', FU_TEXT_DOMAIN),
+                'trash' => __('Lixeira', FU_TEXT_DOMAIN),
+                'future' => __('Agendado', FU_TEXT_DOMAIN)
+            );
+            
+            return isset($status_labels[$status]) ? $status_labels[$status] : $status;
         } catch (Exception $e) {
             return '';
         }

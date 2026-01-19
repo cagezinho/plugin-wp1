@@ -340,6 +340,26 @@ class Ferramentas_Upload_Admin_Page {
                                 <input type="checkbox" name="export_fields[]" value="url" checked style="margin-right: 10px;">
                                 <span><strong><?php esc_html_e('URL', 'ferramentas-upload'); ?></strong></span>
                             </label>
+                            
+                            <label style="display: flex; align-items: center; cursor: pointer; padding: 10px; border: 1px solid #ddd; border-radius: 4px; transition: background-color 0.2s;">
+                                <input type="checkbox" name="export_fields[]" value="canonical_url" style="margin-right: 10px;">
+                                <span><strong><?php esc_html_e('URL Canônica', 'ferramentas-upload'); ?></strong></span>
+                            </label>
+                            
+                            <label style="display: flex; align-items: center; cursor: pointer; padding: 10px; border: 1px solid #ddd; border-radius: 4px; transition: background-color 0.2s;">
+                                <input type="checkbox" name="export_fields[]" value="featured_image" style="margin-right: 10px;">
+                                <span><strong><?php esc_html_e('Imagem Destacada', 'ferramentas-upload'); ?></strong></span>
+                            </label>
+                            
+                            <label style="display: flex; align-items: center; cursor: pointer; padding: 10px; border: 1px solid #ddd; border-radius: 4px; transition: background-color 0.2s;">
+                                <input type="checkbox" name="export_fields[]" value="internal_links_count" style="margin-right: 10px;">
+                                <span><strong><?php esc_html_e('Contagem de Links Internos', 'ferramentas-upload'); ?></strong></span>
+                            </label>
+                            
+                            <label style="display: flex; align-items: center; cursor: pointer; padding: 10px; border: 1px solid #ddd; border-radius: 4px; transition: background-color 0.2s;">
+                                <input type="checkbox" name="export_fields[]" value="post_status" style="margin-right: 10px;">
+                                <span><strong><?php esc_html_e('Status do Post', 'ferramentas-upload'); ?></strong></span>
+                            </label>
                         </div>
                     </div>
                     
