@@ -571,8 +571,16 @@ class Ferramentas_Upload_Admin_Page {
                             class="fu-form-input"
                         >
                         <p class="fu-form-description">
-                            <?php esc_html_e('URL do endpoint da API. Padrão: OpenAI. Se usar chave do Google AI Studio (começa com AIza), deixe o padrão - será detectado automaticamente. Para outros serviços, altere aqui.', 'ferramentas-upload'); ?>
+                            <?php esc_html_e('URL do endpoint da API. Padrão: OpenAI. Para IA Studio ou outras APIs compatíveis com formato OpenAI, use a URL completa do endpoint. Exemplo: https://api.ia.studio/v1/chat/completions', 'ferramentas-upload'); ?>
                         </p>
+                        <div class="fu-form-notice" style="margin-top: 10px;">
+                            <p><strong><?php esc_html_e('Nota:', 'ferramentas-upload'); ?></strong></p>
+                            <ul>
+                                <li><?php esc_html_e('Para IA Studio: use a URL completa do endpoint fornecido pela documentação.', 'ferramentas-upload'); ?></li>
+                                <li><?php esc_html_e('Para OpenAI: deixe o padrão ou use https://api.openai.com/v1/chat/completions', 'ferramentas-upload'); ?></li>
+                                <li><?php esc_html_e('Para Google AI Studio: deixe o padrão - será detectado automaticamente pela chave.', 'ferramentas-upload'); ?></li>
+                            </ul>
+                        </div>
                     </div>
 
                     <div class="fu-form-group">

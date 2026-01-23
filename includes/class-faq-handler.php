@@ -85,13 +85,15 @@ class Ferramentas_Upload_FAQ_Handler {
     }
 
     /**
-     * Chama a API do IA Studio (suporta OpenAI e Google Gemini)
+     * Chama a API do IA Studio (suporta OpenAI, Google Gemini e outras APIs compatíveis)
      */
     private function call_ia_studio_api($prompt) {
-        // Detecta se é chave do Google (começa com AIza)
+        // Detecta tipo de API pela chave ou URL
         $is_google_api = (strpos($this->api_key, 'AIza') === 0);
+        $is_openai_api = (strpos($this->api_url, 'openai.com') !== false);
         
-        if ($is_google_api) {
+        // Se for Google API, tenta usar formato do Google
+        if ($is_google_api && !$is_openai_api) {
             // API do Google Gemini - usando gemini-pro (modelo básico mais disponível)
             $api_url = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=' . $this->api_key;
             
@@ -143,6 +145,7 @@ class Ferramentas_Upload_FAQ_Handler {
             
             return $data['candidates'][0]['content']['parts'][0]['text'];
         } else {
+            // API compatível com OpenAI (OpenAI, IA Studio, etc.)
             // API do OpenAI (padrão)
             $body = array(
                 'model' => 'gpt-4',
