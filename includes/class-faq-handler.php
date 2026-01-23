@@ -69,11 +69,16 @@ class Ferramentas_Upload_FAQ_Handler {
         $base_prompt = !empty($this->prompt) ? $this->prompt : $this->get_default_prompt();
         
         $full_prompt = $base_prompt . "\n\n";
-        $full_prompt .= "Título do Post: " . $title . "\n\n";
-        $full_prompt .= "Conteúdo do Post:\n" . $content . "\n\n";
+        $full_prompt .= "=== CONTEÚDO PARA ANÁLISE ===\n\n";
+        $full_prompt .= "Título: " . $title . "\n\n";
+        $full_prompt .= "Conteúdo Completo:\n" . $content . "\n\n";
         $full_prompt .= "Resumo: " . $excerpt . "\n\n";
-        $full_prompt .= "Por favor, gere perguntas e respostas relevantes baseadas no conteúdo acima. Retorne APENAS um JSON válido no formato:\n";
+        $full_prompt .= "=== INSTRUÇÕES FINAIS ===\n";
+        $full_prompt .= "Analise o conteúdo acima seguindo todas as regras estabelecidas.\n";
+        $full_prompt .= "Identifique FAQ explícito, implícito ou se não há conteúdo elegível.\n";
+        $full_prompt .= "Retorne APENAS um JSON válido no formato:\n";
         $full_prompt .= '{"faq": [{"question": "Pergunta 1", "answer": "Resposta 1"}, {"question": "Pergunta 2", "answer": "Resposta 2"}]}';
+        $full_prompt .= "\n\nSe não houver conteúdo elegível, retorne: {\"faq\": []}";
 
         return $full_prompt;
     }
