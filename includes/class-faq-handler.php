@@ -282,9 +282,41 @@ Crie entre 3 e 10 perguntas e respostas baseadas no conteúdo fornecido.";
             return $this->parse_faq_manual($response);
         }
 
-        // Verifica se tem a estrutura esperada
+        // Verifica se tem a estrutura esperada (formato simples)
         if (isset($data['faq']) && is_array($data['faq'])) {
             return $data['faq'];
+        }
+
+        // Verifica se tem json_ld com mainEntity (formato Schema.org completo)
+        if (isset($data['json_ld']['mainEntity']) && is_array($data['json_ld']['mainEntity'])) {
+            $faq_array = array();
+            foreach ($data['json_ld']['mainEntity'] as $item) {
+                if (isset($item['name']) && isset($item['acceptedAnswer']['text'])) {
+                    $faq_array[] = array(
+                        'question' => $item['name'],
+                        'answer' => $item['acceptedAnswer']['text']
+                    );
+                }
+            }
+            if (!empty($faq_array)) {
+                return $faq_array;
+            }
+        }
+
+        // Verifica se é diretamente um FAQPage Schema.org
+        if (isset($data['@type']) && $data['@type'] === 'FAQPage' && isset($data['mainEntity']) && is_array($data['mainEntity'])) {
+            $faq_array = array();
+            foreach ($data['mainEntity'] as $item) {
+                if (isset($item['name']) && isset($item['acceptedAnswer']['text'])) {
+                    $faq_array[] = array(
+                        'question' => $item['name'],
+                        'answer' => $item['acceptedAnswer']['text']
+                    );
+                }
+            }
+            if (!empty($faq_array)) {
+                return $faq_array;
+            }
         }
 
         // Tenta outras estruturas possíveis
