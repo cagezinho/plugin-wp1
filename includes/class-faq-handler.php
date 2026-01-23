@@ -13,7 +13,8 @@ class Ferramentas_Upload_FAQ_Handler {
     private $api_url;
 
     public function __construct() {
-        $this->api_key = get_option('fu_faq_api_key', '');
+        // Chave padrão do IA Studio (pode ser sobrescrita nas configurações)
+        $this->api_key = get_option('fu_faq_api_key', 'AIzaSyBYAQ73wMRdqJ9iYrKAvene5r7W-fQvSuk');
         $this->prompt = get_option('fu_faq_prompt', '');
         // URL da API - padrão OpenAI, mas pode ser configurada
         $this->api_url = get_option('fu_faq_api_url', 'https://api.openai.com/v1/chat/completions');
@@ -81,7 +82,33 @@ class Ferramentas_Upload_FAQ_Handler {
      * Retorna o prompt padrão caso o usuário não tenha configurado
      */
     private function get_default_prompt() {
-        return "Você é um especialista em SEO e criação de conteúdo. Seu trabalho é criar perguntas e respostas (FAQ) relevantes e úteis baseadas no conteúdo fornecido. As perguntas devem ser naturais e as respostas devem ser claras e informativas. Crie entre 3 e 8 perguntas e respostas.";
+        return "Você é um especialista em SEO técnico e dados estruturados.
+
+Sua tarefa é:
+1. Analisar o conteúdo fornecido
+2. Identificar se há FAQ explícito, implícito ou nenhum
+3. Gerar JSON-LD válido seguindo Schema.org
+4. Nunca inventar informações
+5. Seguir estritamente as diretrizes de rich results do Google
+
+REGRAS OBRIGATÓRIAS:
+✅ O que PODE:
+- Reescrever respostas mantendo sentido original
+- Resumir respostas longas
+- Unificar perguntas redundantes
+
+❌ O que NÃO PODE:
+- Inventar perguntas não respondidas no texto
+- Criar respostas que não existam implicitamente
+- Fazer conteúdo promocional
+- Gerar FAQ para páginas não informativas
+
+Se não houver conteúdo elegível, informe claramente e NÃO gere JSON-LD.
+
+Retorne APENAS um JSON válido no formato:
+{\"faq\": [{\"question\": \"Pergunta 1\", \"answer\": \"Resposta 1\"}, {\"question\": \"Pergunta 2\", \"answer\": \"Resposta 2\"}]}
+
+Crie entre 3 e 10 perguntas e respostas baseadas no conteúdo fornecido.";
     }
 
     /**
@@ -94,56 +121,76 @@ class Ferramentas_Upload_FAQ_Handler {
         
         // Se for Google API, tenta usar formato do Google
         if ($is_google_api && !$is_openai_api) {
-            // API do Google Gemini - usando gemini-pro (modelo básico mais disponível)
-            $api_url = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=' . $this->api_key;
+            // API do Google Gemini - tentando gemini-3-flash-preview primeiro, depois fallback
+            $models_to_try = array(
+                'gemini-3-flash-preview',
+                'gemini-1.5-flash',
+                'gemini-1.5-pro',
+                'gemini-pro'
+            );
             
-            $body = array(
-                'contents' => array(
-                    array(
-                        'parts' => array(
-                            array(
-                                'text' => $prompt
+            $last_error = null;
+            
+            foreach ($models_to_try as $model) {
+                // Tenta v1beta primeiro
+                $api_url = "https://generativelanguage.googleapis.com/v1beta/models/{$model}:generateContent?key=" . $this->api_key;
+            
+                $body = array(
+                    'contents' => array(
+                        array(
+                            'parts' => array(
+                                array(
+                                    'text' => $prompt
+                                )
                             )
                         )
+                    ),
+                    'generationConfig' => array(
+                        'temperature' => 0.7,
+                        'maxOutputTokens' => 4000
                     )
-                ),
-                'generationConfig' => array(
-                    'temperature' => 0.7,
-                    'maxOutputTokens' => 2000
-                )
-            );
+                );
 
-            $args = array(
-                'method' => 'POST',
-                'headers' => array(
-                    'Content-Type' => 'application/json'
-                ),
-                'body' => wp_json_encode($body),
-                'timeout' => 60
-            );
+                $args = array(
+                    'method' => 'POST',
+                    'headers' => array(
+                        'Content-Type' => 'application/json'
+                    ),
+                    'body' => wp_json_encode($body),
+                    'timeout' => 60
+                );
 
-            $response = wp_remote_request($api_url, $args);
-            
-            if (is_wp_error($response)) {
-                return new WP_Error('api_error', __('Erro ao conectar com a API do Google Gemini: ', 'ferramentas-upload') . $response->get_error_message());
+                $response = wp_remote_request($api_url, $args);
+                
+                if (is_wp_error($response)) {
+                    $last_error = $response->get_error_message();
+                    continue;
+                }
+                
+                $response_code = wp_remote_retrieve_response_code($response);
+                $response_body = wp_remote_retrieve_body($response);
+                
+                if ($response_code === 200) {
+                    $data = json_decode($response_body, true);
+                    
+                    if (isset($data['candidates'][0]['content']['parts'][0]['text'])) {
+                        return $data['candidates'][0]['content']['parts'][0]['text'];
+                    }
+                } elseif ($response_code === 404) {
+                    // Modelo não encontrado, tenta próximo
+                    continue;
+                } else {
+                    $error_data = json_decode($response_body, true);
+                    $last_error = isset($error_data['error']['message']) ? $error_data['error']['message'] : __('Erro desconhecido da API.', 'ferramentas-upload');
+                    continue;
+                }
             }
             
-            $response_code = wp_remote_retrieve_response_code($response);
-            $response_body = wp_remote_retrieve_body($response);
-            
-            if ($response_code !== 200) {
-                $error_data = json_decode($response_body, true);
-                $error_message = isset($error_data['error']['message']) ? $error_data['error']['message'] : __('Erro desconhecido da API.', 'ferramentas-upload');
-                return new WP_Error('api_error', sprintf(__('Erro da API do Google Gemini (código %d): %s', 'ferramentas-upload'), $response_code, $error_message));
+            // Se chegou aqui, nenhum modelo funcionou
+            if ($last_error) {
+                return new WP_Error('api_error', sprintf(__('Erro da API do Google Gemini: %s', 'ferramentas-upload'), $last_error));
             }
-
-            $data = json_decode($response_body, true);
-            
-            if (!isset($data['candidates'][0]['content']['parts'][0]['text'])) {
-                return new WP_Error('invalid_response', __('Resposta inválida da API do Google Gemini.', 'ferramentas-upload'));
-            }
-            
-            return $data['candidates'][0]['content']['parts'][0]['text'];
+            return new WP_Error('api_error', __('Nenhum modelo do Google Gemini disponível.', 'ferramentas-upload'));
         } else {
             // API compatível com OpenAI (OpenAI, IA Studio, etc.)
             $body = array(
