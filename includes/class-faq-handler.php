@@ -146,7 +146,6 @@ class Ferramentas_Upload_FAQ_Handler {
             return $data['candidates'][0]['content']['parts'][0]['text'];
         } else {
             // API compatível com OpenAI (OpenAI, IA Studio, etc.)
-            // API do OpenAI (padrão)
             $body = array(
                 'model' => 'gpt-4',
                 'messages' => array(
