@@ -92,85 +92,56 @@ class Ferramentas_Upload_FAQ_Handler {
         $is_google_api = (strpos($this->api_key, 'AIza') === 0);
         
         if ($is_google_api) {
-            // API do Google Gemini - tenta diferentes modelos em ordem
-            $models_to_try = array(
-                'gemini-1.5-flash',
-                'gemini-1.5-pro',
-                'gemini-pro'
-            );
+            // API do Google Gemini - usando gemini-1.5-flash (modelo fixo)
+            $api_url = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=' . $this->api_key;
             
-            $last_error = null;
-            
-            foreach ($models_to_try as $model) {
-                // Tenta v1beta primeiro, depois v1
-                $versions_to_try = array('v1beta', 'v1');
-                
-                foreach ($versions_to_try as $version) {
-                    $api_url = "https://generativelanguage.googleapis.com/{$version}/models/{$model}:generateContent?key=" . $this->api_key;
-                    
-                    $body = array(
-                        'contents' => array(
+            $body = array(
+                'contents' => array(
+                    array(
+                        'parts' => array(
                             array(
-                                'parts' => array(
-                                    array(
-                                        'text' => $prompt
-                                    )
-                                )
+                                'text' => $prompt
                             )
-                        ),
-                        'generationConfig' => array(
-                            'temperature' => 0.7,
-                            'maxOutputTokens' => 2000
                         )
-                    );
+                    )
+                ),
+                'generationConfig' => array(
+                    'temperature' => 0.7,
+                    'maxOutputTokens' => 2000
+                )
+            );
 
-                    $args = array(
-                        'method' => 'POST',
-                        'headers' => array(
-                            'Content-Type' => 'application/json'
-                        ),
-                        'body' => wp_json_encode($body),
-                        'timeout' => 60
-                    );
+            $args = array(
+                'method' => 'POST',
+                'headers' => array(
+                    'Content-Type' => 'application/json'
+                ),
+                'body' => wp_json_encode($body),
+                'timeout' => 60
+            );
 
-                    $response = wp_remote_request($api_url, $args);
-                    
-                    if (is_wp_error($response)) {
-                        // Erro de conexão, salva e continua
-                        $last_error = $response->get_error_message();
-                        continue;
-                    }
-                    
-                    $response_code = wp_remote_retrieve_response_code($response);
-                    $response_body = wp_remote_retrieve_body($response);
-                    
-                    if ($response_code === 200) {
-                        // Sucesso! Retorna a resposta
-                        $data = json_decode($response_body, true);
-                        
-                        if (isset($data['candidates'][0]['content']['parts'][0]['text'])) {
-                            return $data['candidates'][0]['content']['parts'][0]['text'];
-                        }
-                    } elseif ($response_code === 404) {
-                        // Modelo não encontrado, tenta próximo
-                        $error_data = json_decode($response_body, true);
-                        $last_error = isset($error_data['error']['message']) ? $error_data['error']['message'] : "Modelo {$model} não encontrado na versão {$version}";
-                        continue;
-                    } else {
-                        // Outro erro, salva e continua tentando
-                        $error_data = json_decode($response_body, true);
-                        $error_msg = isset($error_data['error']['message']) ? $error_data['error']['message'] : __('Erro desconhecido da API.', 'ferramentas-upload');
-                        $last_error = sprintf(__('Erro %d: %s (tentando modelo: %s, versão: %s)', 'ferramentas-upload'), $response_code, $error_msg, $model, $version);
-                        continue;
-                    }
-                }
+            $response = wp_remote_request($api_url, $args);
+            
+            if (is_wp_error($response)) {
+                return new WP_Error('api_error', __('Erro ao conectar com a API do Google Gemini: ', 'ferramentas-upload') . $response->get_error_message());
             }
             
-            // Se chegou aqui, nenhum modelo funcionou
-            if ($last_error) {
-                return new WP_Error('api_error', sprintf(__('Erro da API do Google Gemini: %s. Verifique se sua chave de API está correta e tem permissões para usar os modelos Gemini.', 'ferramentas-upload'), $last_error));
+            $response_code = wp_remote_retrieve_response_code($response);
+            $response_body = wp_remote_retrieve_body($response);
+            
+            if ($response_code !== 200) {
+                $error_data = json_decode($response_body, true);
+                $error_message = isset($error_data['error']['message']) ? $error_data['error']['message'] : __('Erro desconhecido da API.', 'ferramentas-upload');
+                return new WP_Error('api_error', sprintf(__('Erro da API do Google Gemini (código %d): %s', 'ferramentas-upload'), $response_code, $error_message));
             }
-            return new WP_Error('api_error', __('Nenhum modelo do Google Gemini disponível. Verifique sua chave de API e se ela tem permissões para usar os modelos Gemini.', 'ferramentas-upload'));
+
+            $data = json_decode($response_body, true);
+            
+            if (!isset($data['candidates'][0]['content']['parts'][0]['text'])) {
+                return new WP_Error('invalid_response', __('Resposta inválida da API do Google Gemini.', 'ferramentas-upload'));
+            }
+            
+            return $data['candidates'][0]['content']['parts'][0]['text'];
         } else {
             // API do OpenAI (padrão)
             $body = array(
