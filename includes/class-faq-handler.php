@@ -13,8 +13,8 @@ class Ferramentas_Upload_FAQ_Handler {
     private $api_url;
 
     public function __construct() {
-        // Chave padrão do IA Studio (pode ser sobrescrita nas configurações)
-        $this->api_key = get_option('fu_faq_api_key', 'AIzaSyBYAQ73wMRdqJ9iYrKAvene5r7W-fQvSuk');
+        // Chave de API deve ser configurada pelo usuário (não hardcoded por segurança)
+        $this->api_key = get_option('fu_faq_api_key', '');
         $this->prompt = get_option('fu_faq_prompt', '');
         // URL da API - padrão OpenAI, mas pode ser configurada
         $this->api_url = get_option('fu_faq_api_url', 'https://api.openai.com/v1/chat/completions');
