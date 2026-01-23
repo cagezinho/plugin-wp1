@@ -52,7 +52,12 @@ class Ferramentas_Upload_FAQ_Handler {
         $faq_data = $this->parse_faq_response($response);
 
         if (empty($faq_data)) {
-            return new WP_Error('no_faq', __('Não foi possível gerar FAQ a partir da resposta da IA.', 'ferramentas-upload'));
+            // Mostra parte da resposta para debug (primeiros 500 caracteres)
+            $debug_response = substr($response, 0, 500);
+            return new WP_Error('no_faq', sprintf(
+                __('Não foi possível gerar FAQ a partir da resposta da IA. Resposta recebida (primeiros 500 caracteres): %s', 'ferramentas-upload'),
+                esc_html($debug_response)
+            ));
         }
 
         return array(
@@ -251,15 +256,24 @@ Crie entre 3 e 10 perguntas e respostas baseadas no conteúdo fornecido.";
      * Parseia a resposta da IA e extrai o FAQ
      */
     private function parse_faq_response($response) {
+        // Remove espaços em branco no início e fim
+        $response = trim($response);
+        
         // Tenta extrair JSON da resposta (pode estar dentro de markdown code blocks)
         $json_match = array();
         if (preg_match('/```(?:json)?\s*(\{.*?\})\s*```/s', $response, $json_match)) {
             $json_str = $json_match[1];
-        } elseif (preg_match('/(\{.*\})/s', $response, $json_match)) {
+        } elseif (preg_match('/(\{[\s\S]*\})/s', $response, $json_match)) {
             $json_str = $json_match[1];
         } else {
             $json_str = $response;
         }
+
+        // Tenta limpar o JSON removendo caracteres problemáticos
+        $json_str = trim($json_str);
+        $json_str = preg_replace('/^[^{]*/', '', $json_str); // Remove texto antes do {
+        $json_str = preg_replace('/[^}]*$/', '', $json_str); // Remove texto depois do }
+        $json_str = $json_str . '}'; // Garante que termina com }
 
         $data = json_decode($json_str, true);
 
@@ -280,6 +294,11 @@ Crie entre 3 e 10 perguntas e respostas baseadas no conteúdo fornecido.";
 
         if (is_array($data) && isset($data[0]['question'])) {
             return $data;
+        }
+
+        // Se o JSON está vazio mas válido, retorna array vazio
+        if (is_array($data) && empty($data)) {
+            return array();
         }
 
         return $this->parse_faq_manual($response);
