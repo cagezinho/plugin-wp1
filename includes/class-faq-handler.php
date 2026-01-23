@@ -85,32 +85,68 @@ class Ferramentas_Upload_FAQ_Handler {
     }
 
     /**
-     * Chama a API do IA Studio
+     * Chama a API do IA Studio (suporta OpenAI e Google Gemini)
      */
     private function call_ia_studio_api($prompt) {
-        $body = array(
-            'model' => 'gpt-4',
-            'messages' => array(
-                array(
-                    'role' => 'user',
-                    'content' => $prompt
+        // Detecta se é chave do Google (começa com AIza)
+        $is_google_api = (strpos($this->api_key, 'AIza') === 0);
+        
+        if ($is_google_api) {
+            // API do Google Gemini
+            $api_url = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=' . $this->api_key;
+            
+            $body = array(
+                'contents' => array(
+                    array(
+                        'parts' => array(
+                            array(
+                                'text' => $prompt
+                            )
+                        )
+                    )
+                ),
+                'generationConfig' => array(
+                    'temperature' => 0.7,
+                    'maxOutputTokens' => 2000
                 )
-            ),
-            'temperature' => 0.7,
-            'max_tokens' => 2000
-        );
+            );
 
-        $args = array(
-            'method' => 'POST',
-            'headers' => array(
-                'Content-Type' => 'application/json',
-                'Authorization' => 'Bearer ' . $this->api_key
-            ),
-            'body' => wp_json_encode($body),
-            'timeout' => 60
-        );
+            $args = array(
+                'method' => 'POST',
+                'headers' => array(
+                    'Content-Type' => 'application/json'
+                ),
+                'body' => wp_json_encode($body),
+                'timeout' => 60
+            );
+        } else {
+            // API do OpenAI (padrão)
+            $body = array(
+                'model' => 'gpt-4',
+                'messages' => array(
+                    array(
+                        'role' => 'user',
+                        'content' => $prompt
+                    )
+                ),
+                'temperature' => 0.7,
+                'max_tokens' => 2000
+            );
 
-        $response = wp_remote_request($this->api_url, $args);
+            $args = array(
+                'method' => 'POST',
+                'headers' => array(
+                    'Content-Type' => 'application/json',
+                    'Authorization' => 'Bearer ' . $this->api_key
+                ),
+                'body' => wp_json_encode($body),
+                'timeout' => 60
+            );
+            
+            $api_url = $this->api_url;
+        }
+
+        $response = wp_remote_request($api_url, $args);
 
         if (is_wp_error($response)) {
             return new WP_Error('api_error', __('Erro ao conectar com a API: ', 'ferramentas-upload') . $response->get_error_message());
@@ -127,11 +163,22 @@ class Ferramentas_Upload_FAQ_Handler {
 
         $data = json_decode($response_body, true);
 
-        if (!isset($data['choices'][0]['message']['content'])) {
-            return new WP_Error('invalid_response', __('Resposta inválida da API.', 'ferramentas-upload'));
+        // Detecta se é resposta do Google Gemini
+        $is_google_api = (strpos($this->api_key, 'AIza') === 0);
+        
+        if ($is_google_api) {
+            // Formato de resposta do Google Gemini
+            if (!isset($data['candidates'][0]['content']['parts'][0]['text'])) {
+                return new WP_Error('invalid_response', __('Resposta inválida da API do Google.', 'ferramentas-upload'));
+            }
+            return $data['candidates'][0]['content']['parts'][0]['text'];
+        } else {
+            // Formato de resposta do OpenAI
+            if (!isset($data['choices'][0]['message']['content'])) {
+                return new WP_Error('invalid_response', __('Resposta inválida da API.', 'ferramentas-upload'));
+            }
+            return $data['choices'][0]['message']['content'];
         }
-
-        return $data['choices'][0]['message']['content'];
     }
 
     /**

@@ -498,7 +498,7 @@ class Ferramentas_Upload_Admin_Page {
                             class="fu-form-input"
                         >
                         <p class="fu-form-description">
-                            <?php esc_html_e('URL do endpoint da API. Padrão: OpenAI. Se usar IA Studio ou outro serviço compatível, altere aqui.', 'ferramentas-upload'); ?>
+                            <?php esc_html_e('URL do endpoint da API. Padrão: OpenAI. Se usar chave do Google AI Studio (começa com AIza), deixe o padrão - será detectado automaticamente. Para outros serviços, altere aqui.', 'ferramentas-upload'); ?>
                         </p>
                     </div>
 
