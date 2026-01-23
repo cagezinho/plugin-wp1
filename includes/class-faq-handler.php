@@ -92,8 +92,8 @@ class Ferramentas_Upload_FAQ_Handler {
         $is_google_api = (strpos($this->api_key, 'AIza') === 0);
         
         if ($is_google_api) {
-            // API do Google Gemini - usando modelo mais recente
-            $api_url = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=' . $this->api_key;
+            // API do Google Gemini - usando v1 ao invés de v1beta
+            $api_url = 'https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=' . $this->api_key;
             
             $body = array(
                 'contents' => array(
