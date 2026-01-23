@@ -253,48 +253,85 @@ Crie entre 3 e 10 perguntas e respostas baseadas no conteúdo fornecido.";
     }
 
     /**
-     * Parseia a resposta da IA e extrai o FAQ
+     * Parseia a resposta da IA e extrai o FAQ - Nova abordagem robusta
      */
     private function parse_faq_response($response) {
         // Remove espaços em branco no início e fim
         $response = trim($response);
         
-        // Tenta extrair JSON da resposta (pode estar dentro de markdown code blocks)
-        $json_match = array();
-        if (preg_match('/```(?:json)?\s*(\{.*?\})\s*```/s', $response, $json_match)) {
-            $json_str = $json_match[1];
-        } elseif (preg_match('/(\{[\s\S]*\})/s', $response, $json_match)) {
-            $json_str = $json_match[1];
-        } else {
+        // Decodifica HTML entities (como &quot; para ")
+        $response = html_entity_decode($response, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+        
+        // Estratégia 1: Tenta extrair JSON de dentro de code blocks markdown
+        $json_str = null;
+        if (preg_match('/```(?:json)?\s*(\{[\s\S]*?\})\s*```/s', $response, $matches)) {
+            $json_str = $matches[1];
+        }
+        // Estratégia 2: Procura por qualquer objeto JSON completo
+        elseif (preg_match('/(\{[\s\S]{20,}\})/s', $response, $matches)) {
+            $json_str = $matches[1];
+        }
+        // Estratégia 3: Se a resposta inteira parece ser JSON
+        elseif (preg_match('/^[\s\n]*\{/s', $response) && preg_match('/\}[\s\n]*$/s', $response)) {
             $json_str = $response;
         }
-
-        // Tenta limpar o JSON removendo caracteres problemáticos
-        $json_str = trim($json_str);
-        $json_str = preg_replace('/^[^{]*/', '', $json_str); // Remove texto antes do {
-        $json_str = preg_replace('/[^}]*$/', '', $json_str); // Remove texto depois do }
-        $json_str = $json_str . '}'; // Garante que termina com }
-
-        $data = json_decode($json_str, true);
-
-        if (json_last_error() !== JSON_ERROR_NONE) {
-            // Se não conseguir parsear JSON, tenta extrair manualmente
-            return $this->parse_faq_manual($response);
+        
+        // Se encontrou JSON, tenta parsear
+        if ($json_str !== null) {
+            $json_str = trim($json_str);
+            
+            // Tenta parsear diretamente
+            $data = json_decode($json_str, true);
+            
+            // Se falhou, tenta limpar mais
+            if (json_last_error() !== JSON_ERROR_NONE) {
+                // Remove texto antes do primeiro {
+                $json_str = preg_replace('/^[^{]*/', '', $json_str);
+                // Encontra o último } válido contando chaves
+                $brace_count = 0;
+                $last_brace_pos = -1;
+                for ($i = 0; $i < strlen($json_str); $i++) {
+                    if ($json_str[$i] === '{') $brace_count++;
+                    if ($json_str[$i] === '}') {
+                        $brace_count--;
+                        if ($brace_count === 0) {
+                            $last_brace_pos = $i;
+                            break;
+                        }
+                    }
+                }
+                if ($last_brace_pos > 0) {
+                    $json_str = substr($json_str, 0, $last_brace_pos + 1);
+                }
+                $data = json_decode($json_str, true);
+            }
+            
+            // Se conseguiu parsear, tenta extrair FAQ
+            if (json_last_error() === JSON_ERROR_NONE && is_array($data)) {
+                $faq_data = $this->extract_faq_from_data($data);
+                if (!empty($faq_data)) {
+                    return $faq_data;
+                }
+            }
         }
-
-        // Verifica se tem a estrutura esperada (formato simples)
-        if (isset($data['faq']) && is_array($data['faq'])) {
-            return $data['faq'];
-        }
-
-        // Verifica se tem json_ld com mainEntity (formato Schema.org completo)
+        
+        // Se todas as estratégias falharam, tenta parsing manual
+        return $this->parse_faq_manual($response);
+    }
+    
+    /**
+     * Extrai FAQ de diferentes estruturas de dados
+     */
+    private function extract_faq_from_data($data) {
+        $faq_array = array();
+        
+        // Estrutura 1: json_ld.mainEntity (formato retornado pela IA)
         if (isset($data['json_ld']['mainEntity']) && is_array($data['json_ld']['mainEntity'])) {
-            $faq_array = array();
             foreach ($data['json_ld']['mainEntity'] as $item) {
                 if (isset($item['name']) && isset($item['acceptedAnswer']['text'])) {
                     $faq_array[] = array(
-                        'question' => $item['name'],
-                        'answer' => $item['acceptedAnswer']['text']
+                        'question' => $this->clean_text($item['name']),
+                        'answer' => $this->clean_text($item['acceptedAnswer']['text'])
                     );
                 }
             }
@@ -302,15 +339,14 @@ Crie entre 3 e 10 perguntas e respostas baseadas no conteúdo fornecido.";
                 return $faq_array;
             }
         }
-
-        // Verifica se é diretamente um FAQPage Schema.org
+        
+        // Estrutura 2: FAQPage Schema.org direto
         if (isset($data['@type']) && $data['@type'] === 'FAQPage' && isset($data['mainEntity']) && is_array($data['mainEntity'])) {
-            $faq_array = array();
             foreach ($data['mainEntity'] as $item) {
                 if (isset($item['name']) && isset($item['acceptedAnswer']['text'])) {
                     $faq_array[] = array(
-                        'question' => $item['name'],
-                        'answer' => $item['acceptedAnswer']['text']
+                        'question' => $this->clean_text($item['name']),
+                        'answer' => $this->clean_text($item['acceptedAnswer']['text'])
                     );
                 }
             }
@@ -318,22 +354,67 @@ Crie entre 3 e 10 perguntas e respostas baseadas no conteúdo fornecido.";
                 return $faq_array;
             }
         }
-
-        // Tenta outras estruturas possíveis
+        
+        // Estrutura 3: Formato simples com 'faq'
+        if (isset($data['faq']) && is_array($data['faq'])) {
+            foreach ($data['faq'] as $item) {
+                if (isset($item['question']) && isset($item['answer'])) {
+                    $faq_array[] = array(
+                        'question' => $this->clean_text($item['question']),
+                        'answer' => $this->clean_text($item['answer'])
+                    );
+                }
+            }
+            if (!empty($faq_array)) {
+                return $faq_array;
+            }
+        }
+        
+        // Estrutura 4: Array direto de perguntas
+        if (is_array($data) && isset($data[0])) {
+            foreach ($data as $item) {
+                if (isset($item['question']) && isset($item['answer'])) {
+                    $faq_array[] = array(
+                        'question' => $this->clean_text($item['question']),
+                        'answer' => $this->clean_text($item['answer'])
+                    );
+                } elseif (isset($item['name']) && isset($item['acceptedAnswer']['text'])) {
+                    $faq_array[] = array(
+                        'question' => $this->clean_text($item['name']),
+                        'answer' => $this->clean_text($item['acceptedAnswer']['text'])
+                    );
+                }
+            }
+            if (!empty($faq_array)) {
+                return $faq_array;
+            }
+        }
+        
+        // Estrutura 5: questions
         if (isset($data['questions']) && is_array($data['questions'])) {
-            return $data['questions'];
+            foreach ($data['questions'] as $item) {
+                if (isset($item['question']) && isset($item['answer'])) {
+                    $faq_array[] = array(
+                        'question' => $this->clean_text($item['question']),
+                        'answer' => $this->clean_text($item['answer'])
+                    );
+                }
+            }
+            if (!empty($faq_array)) {
+                return $faq_array;
+            }
         }
-
-        if (is_array($data) && isset($data[0]['question'])) {
-            return $data;
-        }
-
-        // Se o JSON está vazio mas válido, retorna array vazio
-        if (is_array($data) && empty($data)) {
-            return array();
-        }
-
-        return $this->parse_faq_manual($response);
+        
+        return array();
+    }
+    
+    /**
+     * Limpa texto removendo HTML entities e espaços extras
+     */
+    private function clean_text($text) {
+        $text = html_entity_decode($text, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+        $text = trim($text);
+        return $text;
     }
 
     /**
