@@ -285,46 +285,119 @@ class Ferramentas_Upload_Admin_Page {
     }
 
     private function render_export_posts_tab() {
+        // Enfileira jQuery se necessário
+        wp_enqueue_script('jquery');
         ?>
         <div class="fu-content-header">
             <h2 class="fu-content-title"><?php esc_html_e('Exportar Posts com Conteúdo Completo', 'ferramentas-upload'); ?></h2>
-            <p class="fu-content-description"><?php esc_html_e('Clique no botão abaixo para exportar um arquivo CSV contendo todos os posts publicados com informações completas.', 'ferramentas-upload'); ?></p>
+            <p class="fu-content-description"><?php esc_html_e('Selecione os campos que deseja exportar e clique no botão abaixo para gerar um arquivo CSV.', 'ferramentas-upload'); ?></p>
         </div>
 
         <div class="fu-form">
             <div class="fu-form-section">
-                <h4><?php esc_html_e('Informações Exportadas', 'ferramentas-upload'); ?></h4>
+                <h4><?php esc_html_e('Selecione os Campos para Exportação', 'ferramentas-upload'); ?></h4>
                 <p class="fu-content-description">
-                    <?php esc_html_e('As colunas no CSV serão:', 'ferramentas-upload'); ?>
+                    <?php esc_html_e('Marque os campos que deseja incluir no arquivo CSV exportado:', 'ferramentas-upload'); ?>
                 </p>
-                <ul>
-                    <li><strong><?php esc_html_e('ID do Post', 'ferramentas-upload'); ?></strong></li>
-                    <li><strong><?php esc_html_e('Título do Post', 'ferramentas-upload'); ?></strong></li>
-                    <li><strong><?php esc_html_e('URL do Post', 'ferramentas-upload'); ?></strong></li>
-                    <li><strong><?php esc_html_e('Categorias', 'ferramentas-upload'); ?></strong></li>
-                    <li><strong><?php esc_html_e('Conteúdo HTML', 'ferramentas-upload'); ?></strong></li>
-                    <li><strong><?php esc_html_e('Resumo/Excerpt', 'ferramentas-upload'); ?></strong></li>
-                </ul>
                 
-                <div class="fu-form-notice">
-                    <p><strong><?php esc_html_e('Nota:', 'ferramentas-upload'); ?></strong></p>
-                    <ul>
-                        <li><?php esc_html_e('Se um post tiver múltiplas categorias, elas serão listadas na mesma célula, separadas por vírgula.', 'ferramentas-upload'); ?></li>
-                        <li><?php esc_html_e('O conteúdo HTML inclui todas as tags e formatação original do post.', 'ferramentas-upload'); ?></li>
-                        <li><?php esc_html_e('Se um post não tiver excerpt definido, será gerado automaticamente a partir do conteúdo.', 'ferramentas-upload'); ?></li>
-                    </ul>
-                </div>
-
-                <form method="post">
+                <form method="post" id="fu-export-form">
                     <input type="hidden" name="<?php echo esc_attr(FU_PREFIX . 'action'); ?>" value="export_posts_categories">
                     <?php wp_nonce_field(FU_EXPORT_POSTS_NONCE_ACTION, FU_EXPORT_POSTS_NONCE_FIELD); ?>
                     
-                    <button type="submit" class="fu-button fu-button-primary">
+                    <div class="fu-export-options" style="margin: 20px 0;">
+                        <div class="fu-checkbox-group" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px;">
+                            <label style="display: flex; align-items: center; cursor: pointer; padding: 10px; border: 1px solid #ddd; border-radius: 4px; transition: background-color 0.2s;">
+                                <input type="checkbox" name="export_fields[]" value="meta_title" checked style="margin-right: 10px;">
+                                <span><strong><?php esc_html_e('Meta Title', 'ferramentas-upload'); ?></strong></span>
+                            </label>
+                            
+                            <label style="display: flex; align-items: center; cursor: pointer; padding: 10px; border: 1px solid #ddd; border-radius: 4px; transition: background-color 0.2s;">
+                                <input type="checkbox" name="export_fields[]" value="meta_description" checked style="margin-right: 10px;">
+                                <span><strong><?php esc_html_e('Meta Description', 'ferramentas-upload'); ?></strong></span>
+                            </label>
+                            
+                            <label style="display: flex; align-items: center; cursor: pointer; padding: 10px; border: 1px solid #ddd; border-radius: 4px; transition: background-color 0.2s;">
+                                <input type="checkbox" name="export_fields[]" value="post_title" checked style="margin-right: 10px;">
+                                <span><strong><?php esc_html_e('Título do Post', 'ferramentas-upload'); ?></strong></span>
+                            </label>
+                            
+                            <label style="display: flex; align-items: center; cursor: pointer; padding: 10px; border: 1px solid #ddd; border-radius: 4px; transition: background-color 0.2s;">
+                                <input type="checkbox" name="export_fields[]" value="post_html" checked style="margin-right: 10px;">
+                                <span><strong><?php esc_html_e('HTML do Post', 'ferramentas-upload'); ?></strong></span>
+                            </label>
+                            
+                            <label style="display: flex; align-items: center; cursor: pointer; padding: 10px; border: 1px solid #ddd; border-radius: 4px; transition: background-color 0.2s;">
+                                <input type="checkbox" name="export_fields[]" value="author" checked style="margin-right: 10px;">
+                                <span><strong><?php esc_html_e('Autor', 'ferramentas-upload'); ?></strong></span>
+                            </label>
+                            
+                            <label style="display: flex; align-items: center; cursor: pointer; padding: 10px; border: 1px solid #ddd; border-radius: 4px; transition: background-color 0.2s;">
+                                <input type="checkbox" name="export_fields[]" value="publish_date" checked style="margin-right: 10px;">
+                                <span><strong><?php esc_html_e('Data de Publicação', 'ferramentas-upload'); ?></strong></span>
+                            </label>
+                            
+                            <label style="display: flex; align-items: center; cursor: pointer; padding: 10px; border: 1px solid #ddd; border-radius: 4px; transition: background-color 0.2s;">
+                                <input type="checkbox" name="export_fields[]" value="url" checked style="margin-right: 10px;">
+                                <span><strong><?php esc_html_e('URL', 'ferramentas-upload'); ?></strong></span>
+                            </label>
+                            
+                            <label style="display: flex; align-items: center; cursor: pointer; padding: 10px; border: 1px solid #ddd; border-radius: 4px; transition: background-color 0.2s;">
+                                <input type="checkbox" name="export_fields[]" value="canonical_url" style="margin-right: 10px;">
+                                <span><strong><?php esc_html_e('URL Canônica', 'ferramentas-upload'); ?></strong></span>
+                            </label>
+                            
+                            <label style="display: flex; align-items: center; cursor: pointer; padding: 10px; border: 1px solid #ddd; border-radius: 4px; transition: background-color 0.2s;">
+                                <input type="checkbox" name="export_fields[]" value="featured_image" style="margin-right: 10px;">
+                                <span><strong><?php esc_html_e('Imagem Destacada', 'ferramentas-upload'); ?></strong></span>
+                            </label>
+                            
+                            <label style="display: flex; align-items: center; cursor: pointer; padding: 10px; border: 1px solid #ddd; border-radius: 4px; transition: background-color 0.2s;">
+                                <input type="checkbox" name="export_fields[]" value="internal_links_count" style="margin-right: 10px;">
+                                <span><strong><?php esc_html_e('Contagem de Links Internos', 'ferramentas-upload'); ?></strong></span>
+                            </label>
+                            
+                            <label style="display: flex; align-items: center; cursor: pointer; padding: 10px; border: 1px solid #ddd; border-radius: 4px; transition: background-color 0.2s;">
+                                <input type="checkbox" name="export_fields[]" value="post_status" style="margin-right: 10px;">
+                                <span><strong><?php esc_html_e('Status do Post', 'ferramentas-upload'); ?></strong></span>
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <div class="fu-form-notice" style="margin: 20px 0;">
+                        <p><strong><?php esc_html_e('Nota:', 'ferramentas-upload'); ?></strong></p>
+                        <ul>
+                            <li><?php esc_html_e('Selecione pelo menos um campo para exportar.', 'ferramentas-upload'); ?></li>
+                            <li><?php esc_html_e('Meta Title e Meta Description são obtidos do Yoast SEO, se disponível.', 'ferramentas-upload'); ?></li>
+                            <li><?php esc_html_e('O conteúdo HTML inclui todas as tags e formatação original do post.', 'ferramentas-upload'); ?></li>
+                        </ul>
+                    </div>
+
+                    <button type="submit" class="fu-button fu-button-primary" id="fu-export-button">
                         <?php esc_html_e('Exportar Posts para CSV', 'ferramentas-upload'); ?>
                     </button>
                 </form>
             </div>
         </div>
+        
+        <script type="text/javascript">
+        jQuery(document).ready(function($) {
+            // Validação: pelo menos um campo deve estar selecionado
+            $('#fu-export-form').on('submit', function(e) {
+                var checked = $('input[name="export_fields[]"]:checked').length;
+                if (checked === 0) {
+                    e.preventDefault();
+                    alert('<?php echo esc_js(__('Por favor, selecione pelo menos um campo para exportar.', 'ferramentas-upload')); ?>');
+                    return false;
+                }
+            });
+            
+            // Efeito hover nos labels
+            $('.fu-checkbox-group label').hover(
+                function() { $(this).css('background-color', '#f5f5f5'); },
+                function() { $(this).css('background-color', 'transparent'); }
+            );
+        });
+        </script>
         <?php
     }
 
