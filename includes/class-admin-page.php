@@ -623,7 +623,93 @@ class Ferramentas_Upload_Admin_Page {
             </div>
 
             <div class="fu-form-section" style="margin-top: 30px;">
-                <h4><?php esc_html_e('Gerar FAQ para Post', 'ferramentas-upload'); ?></h4>
+                <h4><?php esc_html_e('Análise em Massa de Posts (Nova Funcionalidade)', 'ferramentas-upload'); ?></h4>
+                <p class="fu-content-description">
+                    <?php esc_html_e('Faça upload de um CSV com URLs de posts para análise automática. O sistema irá identificar posts elegíveis e gerar um CSV com perguntas e respostas para revisão.', 'ferramentas-upload'); ?>
+                </p>
+
+                <div class="fu-form-notice" style="margin: 20px 0;">
+                    <p><strong><?php esc_html_e('Como funciona:', 'ferramentas-upload'); ?></strong></p>
+                    <ol>
+                        <li><?php esc_html_e('Faça upload de um CSV com uma coluna contendo URLs dos posts (primeira linha será ignorada como cabeçalho).', 'ferramentas-upload'); ?></li>
+                        <li><?php esc_html_e('O sistema analisará cada post verificando:', 'ferramentas-upload'); ?>
+                            <ul>
+                                <li><?php esc_html_e('Se possui subtítulos em formato de perguntas (cada subtítulo vira pergunta e o parágrafo seguinte vira resposta).', 'ferramentas-upload'); ?></li>
+                                <li><?php esc_html_e('Se possui estrutura de FAQ na página (fora do HTML principal).', 'ferramentas-upload'); ?></li>
+                                <li><?php esc_html_e('Se nenhuma condição for atendida, o post será ignorado.', 'ferramentas-upload'); ?></li>
+                            </ul>
+                        </li>
+                        <li><?php esc_html_e('Um CSV será gerado com todos os posts elegíveis e suas perguntas/respostas.', 'ferramentas-upload'); ?></li>
+                        <li><?php esc_html_e('Revise o CSV, faça alterações se necessário e faça upload novamente para aplicar nos posts.', 'ferramentas-upload'); ?></li>
+                    </ol>
+                </div>
+
+                <form id="fu_process_urls_form" enctype="multipart/form-data" style="margin: 20px 0;">
+                    <?php wp_nonce_field(FU_FAQ_AJAX_NONCE_ACTION, FU_FAQ_AJAX_NONCE_FIELD); ?>
+                    
+                    <div class="fu-form-group">
+                        <label for="fu_urls_csv_file" class="fu-form-label">
+                            <?php esc_html_e('CSV com URLs dos Posts', 'ferramentas-upload'); ?>
+                        </label>
+                        <input type="file" id="fu_urls_csv_file" name="csv_file" accept=".csv" required class="fu-form-input">
+                        <p class="fu-form-description">
+                            <?php esc_html_e('CSV com uma coluna contendo as URLs completas dos posts do WordPress.', 'ferramentas-upload'); ?>
+                        </p>
+                    </div>
+
+                    <button type="submit" class="fu-button fu-button-primary" id="fu_process_urls_btn">
+                        <?php esc_html_e('Processar URLs e Gerar CSV', 'ferramentas-upload'); ?>
+                    </button>
+                </form>
+
+                <a href="<?php echo esc_url(plugins_url('includes/modelo-urls-faq.csv', dirname(__FILE__))); ?>" download class="fu-button-download" style="margin-top: 10px; display: inline-block;">
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" style="vertical-align: middle; margin-right: 5px;">
+                        <path d="M8.5 11.5L12 8H9V4H8V8H5L8.5 11.5Z"/>
+                        <path d="M3 13H13V14H3V13Z"/>
+                    </svg>
+                    <?php esc_html_e('Baixar Modelo da Planilha (URLs)', 'ferramentas-upload'); ?>
+                </a>
+
+                <div id="fu_urls_loading" style="display: none; margin-top: 20px;">
+                    <p><?php esc_html_e('Processando URLs... Isso pode levar alguns minutos. Aguarde.', 'ferramentas-upload'); ?></p>
+                </div>
+
+                <div id="fu_urls_result" style="display: none; margin-top: 20px;"></div>
+
+                <div class="fu-form-section" style="margin-top: 40px; border-top: 1px solid #ddd; padding-top: 30px;">
+                    <h4><?php esc_html_e('Aplicar CSV Revisado', 'ferramentas-upload'); ?></h4>
+                    <p class="fu-content-description">
+                        <?php esc_html_e('Após revisar e editar o CSV gerado, faça upload novamente para aplicar os FAQs nos posts.', 'ferramentas-upload'); ?>
+                    </p>
+
+                    <form id="fu_apply_reviewed_form" enctype="multipart/form-data" style="margin: 20px 0;">
+                        <?php wp_nonce_field(FU_FAQ_AJAX_NONCE_ACTION, FU_FAQ_AJAX_NONCE_FIELD); ?>
+                        
+                        <div class="fu-form-group">
+                            <label for="fu_reviewed_csv_file" class="fu-form-label">
+                                <?php esc_html_e('CSV Revisado', 'ferramentas-upload'); ?>
+                            </label>
+                            <input type="file" id="fu_reviewed_csv_file" name="csv_file" accept=".csv" required class="fu-form-input">
+                            <p class="fu-form-description">
+                                <?php esc_html_e('CSV revisado com as colunas: URL, Post ID, Post Title, Question, Answer.', 'ferramentas-upload'); ?>
+                            </p>
+                        </div>
+
+                        <button type="submit" class="fu-button fu-button-primary" id="fu_apply_reviewed_btn">
+                            <?php esc_html_e('Aplicar FAQ nos Posts', 'ferramentas-upload'); ?>
+                        </button>
+                    </form>
+
+                    <div id="fu_reviewed_loading" style="display: none; margin-top: 20px;">
+                        <p><?php esc_html_e('Aplicando FAQs... Aguarde.', 'ferramentas-upload'); ?></p>
+                    </div>
+
+                    <div id="fu_reviewed_result" style="display: none; margin-top: 20px;"></div>
+                </div>
+            </div>
+
+            <div class="fu-form-section" style="margin-top: 30px; border-top: 1px solid #ddd; padding-top: 30px;">
+                <h4><?php esc_html_e('Gerar FAQ para Post Individual (Funcionalidade Antiga)', 'ferramentas-upload'); ?></h4>
                 <p class="fu-content-description">
                     <?php esc_html_e('Selecione um post para gerar FAQ automaticamente. Você poderá revisar antes de aplicar.', 'ferramentas-upload'); ?>
                 </p>
@@ -701,6 +787,150 @@ class Ferramentas_Upload_Admin_Page {
         jQuery(document).ready(function($) {
             var currentPostId = null;
             var currentFaqData = null;
+
+            // Processa CSV de URLs
+            $('#fu_process_urls_form').on('submit', function(e) {
+                e.preventDefault();
+                
+                var formData = new FormData();
+                var fileInput = $('#fu_urls_csv_file')[0];
+                
+                if (!fileInput.files.length) {
+                    alert('<?php echo esc_js(__('Por favor, selecione um arquivo CSV.', 'ferramentas-upload')); ?>');
+                    return;
+                }
+                
+                formData.append('action', 'fu_process_urls_csv');
+                formData.append('csv_file', fileInput.files[0]);
+                formData.append('nonce', '<?php echo wp_create_nonce(FU_FAQ_AJAX_NONCE_ACTION); ?>');
+                
+                $('#fu_urls_loading').show();
+                $('#fu_urls_result').hide();
+                $('#fu_process_urls_btn').prop('disabled', true);
+                
+                $.ajax({
+                    url: ajaxurl,
+                    type: 'POST',
+                    data: formData,
+                    processData: false,
+                    contentType: false,
+                    success: function(response) {
+                        $('#fu_urls_loading').hide();
+                        $('#fu_process_urls_btn').prop('disabled', false);
+                        
+                        if (response.success) {
+                            // Cria link de download
+                            var blob = base64ToBlob(response.data.file_content, 'text/csv');
+                            var url = window.URL.createObjectURL(blob);
+                            var a = document.createElement('a');
+                            a.href = url;
+                            a.download = response.data.filename;
+                            document.body.appendChild(a);
+                            a.click();
+                            window.URL.revokeObjectURL(url);
+                            document.body.removeChild(a);
+                            
+                            $('#fu_urls_result').html(
+                                '<div class="fu-notice success">' +
+                                '<p>' + response.data.message + '</p>' +
+                                '<p><?php echo esc_js(__('CSV baixado automaticamente. Revise e faça upload novamente na seção "Aplicar CSV Revisado".', 'ferramentas-upload')); ?></p>' +
+                                '</div>'
+                            ).show();
+                        } else {
+                            $('#fu_urls_result').html(
+                                '<div class="fu-notice error">' +
+                                '<p>' + (response.data.message || '<?php echo esc_js(__('Erro ao processar CSV.', 'ferramentas-upload')); ?>') + '</p>' +
+                                '</div>'
+                            ).show();
+                        }
+                    },
+                    error: function() {
+                        $('#fu_urls_loading').hide();
+                        $('#fu_process_urls_btn').prop('disabled', false);
+                        $('#fu_urls_result').html(
+                            '<div class="fu-notice error">' +
+                            '<p><?php echo esc_js(__('Erro ao conectar com o servidor.', 'ferramentas-upload')); ?></p>' +
+                            '</div>'
+                        ).show();
+                    }
+                });
+            });
+
+            // Aplica CSV revisado
+            $('#fu_apply_reviewed_form').on('submit', function(e) {
+                e.preventDefault();
+                
+                var formData = new FormData();
+                var fileInput = $('#fu_reviewed_csv_file')[0];
+                
+                if (!fileInput.files.length) {
+                    alert('<?php echo esc_js(__('Por favor, selecione um arquivo CSV.', 'ferramentas-upload')); ?>');
+                    return;
+                }
+                
+                formData.append('action', 'fu_apply_reviewed_csv');
+                formData.append('csv_file', fileInput.files[0]);
+                formData.append('nonce', '<?php echo wp_create_nonce(FU_FAQ_AJAX_NONCE_ACTION); ?>');
+                
+                $('#fu_reviewed_loading').show();
+                $('#fu_reviewed_result').hide();
+                $('#fu_apply_reviewed_btn').prop('disabled', true);
+                
+                $.ajax({
+                    url: ajaxurl,
+                    type: 'POST',
+                    data: formData,
+                    processData: false,
+                    contentType: false,
+                    success: function(response) {
+                        $('#fu_reviewed_loading').hide();
+                        $('#fu_apply_reviewed_btn').prop('disabled', false);
+                        
+                        if (response.success) {
+                            var message = response.data.message;
+                            if (response.data.errors && response.data.errors.length > 0) {
+                                message += '<ul>';
+                                response.data.errors.forEach(function(error) {
+                                    message += '<li>' + escapeHtml(error) + '</li>';
+                                });
+                                message += '</ul>';
+                            }
+                            
+                            $('#fu_reviewed_result').html(
+                                '<div class="fu-notice success">' +
+                                '<p>' + message + '</p>' +
+                                '</div>'
+                            ).show();
+                        } else {
+                            $('#fu_reviewed_result').html(
+                                '<div class="fu-notice error">' +
+                                '<p>' + (response.data.message || '<?php echo esc_js(__('Erro ao aplicar CSV.', 'ferramentas-upload')); ?>') + '</p>' +
+                                '</div>'
+                            ).show();
+                        }
+                    },
+                    error: function() {
+                        $('#fu_reviewed_loading').hide();
+                        $('#fu_apply_reviewed_btn').prop('disabled', false);
+                        $('#fu_reviewed_result').html(
+                            '<div class="fu-notice error">' +
+                            '<p><?php echo esc_js(__('Erro ao conectar com o servidor.', 'ferramentas-upload')); ?></p>' +
+                            '</div>'
+                        ).show();
+                    }
+                });
+            });
+
+            // Função auxiliar para converter base64 em blob
+            function base64ToBlob(base64, mimeType) {
+                var byteCharacters = atob(base64);
+                var byteNumbers = new Array(byteCharacters.length);
+                for (var i = 0; i < byteCharacters.length; i++) {
+                    byteNumbers[i] = byteCharacters.charCodeAt(i);
+                }
+                var byteArray = new Uint8Array(byteNumbers);
+                return new Blob([byteArray], {type: mimeType});
+            }
 
             // Habilita botão quando post é selecionado
             $('#fu_faq_post_select').on('change', function() {

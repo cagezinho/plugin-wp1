@@ -122,6 +122,364 @@ Crie entre 3 e 10 perguntas e respostas baseadas no conteúdo fornecido.";
     }
 
     /**
+     * Retorna o prompt para análise de posts com URLs (nova funcionalidade)
+     */
+    private function get_analysis_prompt() {
+        $custom_prompt = get_option('fu_faq_prompt', '');
+        if (!empty($custom_prompt)) {
+            return $custom_prompt;
+        }
+        
+        return "Você é um especialista em análise de conteúdo web e extração de FAQ estruturado.
+
+Sua tarefa é analisar o conteúdo HTML fornecido e identificar se ele contém FAQ elegível seguindo EXATAMENTE estas condições:
+
+CONDIÇÃO 1 - Subtítulos em formato de perguntas:
+- Verifique se o post possui subtítulos (tags H2, H3, H4, etc.) que estão em formato de PERGUNTAS (terminam com ?)
+- Se encontrar MAIS DE UMA pergunta como subtítulo:
+  * Cada subtítulo que for uma pergunta deve virar uma pergunta no FAQ
+  * O parágrafo IMEDIATAMENTE seguinte a cada subtítulo-pergunta será interpretado como a resposta
+  * Se o parágrafo for muito extenso (mais de 300 palavras), crie um resumo conciso mantendo as informações principais
+  * Retorne no formato: {\"faq\": [{\"question\": \"Pergunta do subtítulo\", \"answer\": \"Resposta do parágrafo seguinte\"}]}
+
+CONDIÇÃO 2 - Estrutura de FAQ na página:
+- Se a CONDIÇÃO 1 não for atendida, verifique se existe uma estrutura de FAQ em algum momento da página
+- Procure por seções como \"Perguntas Frequentes\", \"FAQ\", ou estruturas HTML que contenham perguntas e respostas
+- Essas estruturas podem estar FORA do HTML principal do post (em widgets, sidebars, etc.)
+- Se encontrar, extraia todas as perguntas e respostas dessa seção
+  * Retorne no formato: {\"faq\": [{\"question\": \"Pergunta encontrada\", \"answer\": \"Resposta encontrada\"}]}
+
+CONDIÇÃO 3 - Nenhuma condição atendida:
+- Se NENHUMA das condições acima for atendida, retorne: {\"faq\": []}
+
+REGRAS IMPORTANTES:
+- NUNCA invente perguntas ou respostas que não existam no conteúdo
+- NUNCA crie FAQ se não houver conteúdo elegível
+- Para respostas longas, sempre crie um resumo conciso (máximo 300 palavras)
+- Mantenha o sentido original das respostas
+- Se encontrar múltiplas perguntas na CONDIÇÃO 1, inclua TODAS no resultado
+
+Retorne APENAS um JSON válido no formato especificado acima. Nada mais.";
+    }
+
+    /**
+     * Processa CSV com URLs de posts e analisa cada um
+     */
+    public function process_urls_csv($csv_file_path) {
+        if (!file_exists($csv_file_path)) {
+            return new WP_Error('file_not_found', __('Arquivo CSV não encontrado.', 'ferramentas-upload'));
+        }
+
+        $urls = array();
+        $handle = fopen($csv_file_path, 'r');
+        
+        if ($handle === false) {
+            return new WP_Error('file_read_error', __('Erro ao ler arquivo CSV.', 'ferramentas-upload'));
+        }
+
+        // Pula a primeira linha (cabeçalho)
+        $header = fgetcsv($handle);
+        
+        // Lê as URLs
+        while (($row = fgetcsv($handle)) !== false) {
+            if (!empty($row[0])) {
+                $url = trim($row[0]);
+                if (!empty($url)) {
+                    $urls[] = $url;
+                }
+            }
+        }
+        
+        fclose($handle);
+
+        if (empty($urls)) {
+            return new WP_Error('no_urls', __('Nenhuma URL encontrada no CSV.', 'ferramentas-upload'));
+        }
+
+        // Analisa cada URL
+        $results = array();
+        foreach ($urls as $url) {
+            $analysis = $this->analyze_post_by_url($url);
+            if (!is_wp_error($analysis) && !empty($analysis['faq'])) {
+                $results[] = array(
+                    'url' => $url,
+                    'post_id' => $analysis['post_id'],
+                    'post_title' => $analysis['post_title'],
+                    'faq' => $analysis['faq']
+                );
+            }
+        }
+
+        return $results;
+    }
+
+    /**
+     * Analisa um post pela URL
+     */
+    private function analyze_post_by_url($url) {
+        // Extrai o post ID ou slug da URL
+        $post_id = url_to_postid($url);
+        
+        if ($post_id === 0) {
+            // Tenta encontrar pelo slug
+            $parsed_url = parse_url($url);
+            if ($parsed_url && isset($parsed_url['path'])) {
+                $path = trim($parsed_url['path'], '/');
+                $path_parts = explode('/', $path);
+                $slug = end($path_parts);
+                
+                if (!empty($slug)) {
+                    $post = get_page_by_path($slug, OBJECT, array('post', 'page'));
+                    if ($post) {
+                        $post_id = $post->ID;
+                    }
+                }
+            }
+        }
+
+        if ($post_id === 0) {
+            return new WP_Error('post_not_found', sprintf(__('Post não encontrado para URL: %s', 'ferramentas-upload'), $url));
+        }
+
+        $post = get_post($post_id);
+        if (!$post) {
+            return new WP_Error('post_not_found', sprintf(__('Post não encontrado para URL: %s', 'ferramentas-upload'), $url));
+        }
+
+        // Obtém o conteúdo HTML do post
+        $post_content = $post->post_content;
+        $post_title = $post->post_title;
+        
+        // Aplica os filtros do WordPress para obter o conteúdo renderizado
+        $full_html = apply_filters('the_content', $post_content);
+        
+        // Se ainda estiver vazio, usa o conteúdo bruto
+        if (empty($full_html)) {
+            $full_html = $post_content;
+        }
+        
+        // Adiciona informações sobre a estrutura HTML para ajudar na análise
+        // Extrai subtítulos (H2, H3, H4) e parágrafos
+        $html_structure = $this->extract_html_structure($full_html);
+
+        // Monta o prompt de análise
+        $analysis_prompt = $this->get_analysis_prompt();
+        $full_prompt = $analysis_prompt . "\n\n";
+        $full_prompt .= "=== CONTEÚDO PARA ANÁLISE ===\n\n";
+        $full_prompt .= "Título: " . $post_title . "\n\n";
+        $full_prompt .= "Conteúdo HTML Completo:\n" . $full_html . "\n\n";
+        
+        // Adiciona estrutura extraída se disponível
+        if (!empty($html_structure)) {
+            $full_prompt .= "Estrutura de Subtítulos Encontrada:\n" . $html_structure . "\n\n";
+        }
+        
+        $full_prompt .= "=== INSTRUÇÕES FINAIS ===\n";
+        $full_prompt .= "Analise o conteúdo HTML acima seguindo EXATAMENTE as 3 condições especificadas.\n";
+        $full_prompt .= "Retorne APENAS um JSON válido no formato: {\"faq\": [{\"question\": \"...\", \"answer\": \"...\"}]}\n";
+        $full_prompt .= "Se nenhuma condição for atendida, retorne: {\"faq\": []}";
+
+        // Chama a API
+        $response = $this->call_ia_studio_api($full_prompt);
+
+        if (is_wp_error($response)) {
+            return $response;
+        }
+
+        // Parseia a resposta
+        $faq_data = $this->parse_faq_response($response);
+
+        return array(
+            'post_id' => $post_id,
+            'post_title' => $post_title,
+            'url' => $url,
+            'faq' => $faq_data
+        );
+    }
+
+    /**
+     * Extrai estrutura HTML (subtítulos e parágrafos) para ajudar na análise
+     */
+    private function extract_html_structure($html) {
+        $structure = array();
+        
+        // Remove scripts e styles
+        $html = preg_replace('/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi', '', $html);
+        $html = preg_replace('/<style\b[^<]*(?:(?!<\/style>)<[^<]*)*<\/style>/gi', '', $html);
+        
+        // Extrai subtítulos (H2, H3, H4)
+        preg_match_all('/<h[2-4][^>]*>(.*?)<\/h[2-4]>/i', $html, $headings);
+        
+        if (!empty($headings[1])) {
+            foreach ($headings[1] as $index => $heading_text) {
+                $heading_text = strip_tags($heading_text);
+                $heading_text = trim($heading_text);
+                
+                // Verifica se é uma pergunta
+                if (substr($heading_text, -1) === '?') {
+                    $structure[] = array(
+                        'type' => 'question_heading',
+                        'text' => $heading_text,
+                        'index' => $index
+                    );
+                } else {
+                    $structure[] = array(
+                        'type' => 'heading',
+                        'text' => $heading_text,
+                        'index' => $index
+                    );
+                }
+            }
+        }
+        
+        // Se encontrou subtítulos em formato de perguntas, retorna informação útil
+        $question_headings = array_filter($structure, function($item) {
+            return $item['type'] === 'question_heading';
+        });
+        
+        if (count($question_headings) > 1) {
+            $info = "Encontrados " . count($question_headings) . " subtítulos em formato de pergunta:\n";
+            foreach ($question_headings as $item) {
+                $info .= "- " . $item['text'] . "\n";
+            }
+            return $info;
+        }
+        
+        return '';
+    }
+
+    /**
+     * Gera CSV com os resultados da análise
+     */
+    public function generate_results_csv($results) {
+        if (empty($results)) {
+            return new WP_Error('no_results', __('Nenhum resultado para exportar.', 'ferramentas-upload'));
+        }
+
+        $filename = 'faq-analysis-results-' . date('Y-m-d-H-i-s') . '.csv';
+        $filepath = sys_get_temp_dir() . '/' . $filename;
+
+        $handle = fopen($filepath, 'w');
+        if ($handle === false) {
+            return new WP_Error('file_write_error', __('Erro ao criar arquivo CSV.', 'ferramentas-upload'));
+        }
+
+        // Cabeçalho
+        fputcsv($handle, array('URL', 'Post ID', 'Post Title', 'Question', 'Answer'));
+
+        // Dados
+        foreach ($results as $result) {
+            if (!empty($result['faq']) && is_array($result['faq'])) {
+                foreach ($result['faq'] as $faq_item) {
+                    fputcsv($handle, array(
+                        $result['url'],
+                        $result['post_id'],
+                        $result['post_title'],
+                        $faq_item['question'],
+                        $faq_item['answer']
+                    ));
+                }
+            }
+        }
+
+        fclose($handle);
+
+        return array(
+            'filepath' => $filepath,
+            'filename' => $filename
+        );
+    }
+
+    /**
+     * Processa CSV revisado e aplica nos posts
+     */
+    public function process_reviewed_csv($csv_file_path) {
+        if (!file_exists($csv_file_path)) {
+            return new WP_Error('file_not_found', __('Arquivo CSV não encontrado.', 'ferramentas-upload'));
+        }
+
+        $handle = fopen($csv_file_path, 'r');
+        if ($handle === false) {
+            return new WP_Error('file_read_error', __('Erro ao ler arquivo CSV.', 'ferramentas-upload'));
+        }
+
+        // Lê cabeçalho
+        $header = fgetcsv($handle);
+        
+        // Verifica se o cabeçalho tem o formato esperado
+        if (empty($header) || count($header) < 5) {
+            fclose($handle);
+            return new WP_Error('invalid_format', __('Formato de CSV inválido. Esperado: URL, Post ID, Post Title, Question, Answer', 'ferramentas-upload'));
+        }
+        
+        // Agrupa FAQ por post
+        $posts_faq = array();
+        $line_number = 1; // Contador de linhas para mensagens de erro
+        
+        while (($row = fgetcsv($handle)) !== false) {
+            $line_number++;
+            
+            // Ignora linhas vazias
+            if (empty(array_filter($row))) {
+                continue;
+            }
+            
+            if (count($row) < 5) {
+                continue; // Linha incompleta, pula
+            }
+            
+            $url = trim($row[0]);
+            $post_id = intval($row[1]);
+            $question = trim($row[3]);
+            $answer = trim($row[4]);
+            
+            // Valida dados obrigatórios
+            if (empty($url) || $post_id <= 0 || empty($question) || empty($answer)) {
+                continue; // Dados inválidos, pula
+            }
+            
+            // Verifica se o post existe
+            $post = get_post($post_id);
+            if (!$post) {
+                continue; // Post não existe, pula
+            }
+            
+            if (!isset($posts_faq[$post_id])) {
+                $posts_faq[$post_id] = array();
+            }
+            
+            $posts_faq[$post_id][] = array(
+                'question' => $question,
+                'answer' => $answer
+            );
+        }
+        
+        fclose($handle);
+
+        if (empty($posts_faq)) {
+            return new WP_Error('no_data', __('Nenhum dado válido encontrado no CSV.', 'ferramentas-upload'));
+        }
+
+        // Aplica FAQ em cada post
+        $applied = 0;
+        $errors = array();
+        
+        foreach ($posts_faq as $post_id => $faq_data) {
+            $result = $this->save_faq_to_post($post_id, $faq_data);
+            if (is_wp_error($result)) {
+                $errors[] = sprintf(__('Erro ao aplicar FAQ no post ID %d: %s', 'ferramentas-upload'), $post_id, $result->get_error_message());
+            } else {
+                $applied++;
+            }
+        }
+
+        return array(
+            'applied' => $applied,
+            'errors' => $errors
+        );
+    }
+
+    /**
      * Chama a API do IA Studio (suporta OpenAI, Google Gemini e outras APIs compatíveis)
      */
     private function call_ia_studio_api($prompt) {

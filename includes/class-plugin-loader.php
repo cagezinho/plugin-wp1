@@ -124,6 +124,8 @@ class Ferramentas_Upload_Loader {
         add_action('admin_init', array($this, 'process_admin_actions'));
         add_action('wp_ajax_fu_generate_faq', array($this, 'ajax_generate_faq'));
         add_action('wp_ajax_fu_apply_faq', array($this, 'ajax_apply_faq'));
+        add_action('wp_ajax_fu_process_urls_csv', array($this, 'ajax_process_urls_csv'));
+        add_action('wp_ajax_fu_apply_reviewed_csv', array($this, 'ajax_apply_reviewed_csv'));
         add_action('wp_head', array($this, 'output_faq_structured_data'));
     }
 
@@ -221,6 +223,91 @@ class Ferramentas_Upload_Loader {
         }
         
         wp_send_json_success(array('message' => __('FAQ aplicado com sucesso!', 'ferramentas-upload')));
+    }
+
+    public function ajax_process_urls_csv() {
+        check_ajax_referer(FU_FAQ_AJAX_NONCE_ACTION, 'nonce');
+        
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error(array('message' => __('Permissão negada.', 'ferramentas-upload')));
+        }
+
+        if (empty($_FILES['csv_file']) || $_FILES['csv_file']['error'] !== UPLOAD_ERR_OK) {
+            wp_send_json_error(array('message' => __('Erro ao fazer upload do arquivo.', 'ferramentas-upload')));
+        }
+
+        $uploaded_file = $_FILES['csv_file']['tmp_name'];
+        
+        require_once FU_PLUGIN_PATH . 'includes/class-faq-handler.php';
+        $handler = new Ferramentas_Upload_FAQ_Handler();
+        
+        // Processa o CSV
+        $results = $handler->process_urls_csv($uploaded_file);
+        
+        if (is_wp_error($results)) {
+            wp_send_json_error(array('message' => $results->get_error_message()));
+        }
+
+        if (empty($results)) {
+            wp_send_json_error(array('message' => __('Nenhum post elegível encontrado nas URLs fornecidas.', 'ferramentas-upload')));
+        }
+
+        // Gera CSV de resultados
+        $csv_result = $handler->generate_results_csv($results);
+        
+        if (is_wp_error($csv_result)) {
+            wp_send_json_error(array('message' => $csv_result->get_error_message()));
+        }
+
+        // Lê o arquivo e envia como download
+        $file_content = file_get_contents($csv_result['filepath']);
+        $file_content_base64 = base64_encode($file_content);
+        
+        // Remove arquivo temporário
+        unlink($csv_result['filepath']);
+
+        wp_send_json_success(array(
+            'message' => sprintf(__('Análise concluída! %d posts elegíveis encontrados.', 'ferramentas-upload'), count($results)),
+            'filename' => $csv_result['filename'],
+            'file_content' => $file_content_base64,
+            'results_count' => count($results)
+        ));
+    }
+
+    public function ajax_apply_reviewed_csv() {
+        check_ajax_referer(FU_FAQ_AJAX_NONCE_ACTION, 'nonce');
+        
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error(array('message' => __('Permissão negada.', 'ferramentas-upload')));
+        }
+
+        if (empty($_FILES['csv_file']) || $_FILES['csv_file']['error'] !== UPLOAD_ERR_OK) {
+            wp_send_json_error(array('message' => __('Erro ao fazer upload do arquivo.', 'ferramentas-upload')));
+        }
+
+        $uploaded_file = $_FILES['csv_file']['tmp_name'];
+        
+        require_once FU_PLUGIN_PATH . 'includes/class-faq-handler.php';
+        $handler = new Ferramentas_Upload_FAQ_Handler();
+        
+        // Processa o CSV revisado
+        $result = $handler->process_reviewed_csv($uploaded_file);
+        
+        if (is_wp_error($result)) {
+            wp_send_json_error(array('message' => $result->get_error_message()));
+        }
+
+        $message = sprintf(__('FAQ aplicado com sucesso em %d post(s).', 'ferramentas-upload'), $result['applied']);
+        
+        if (!empty($result['errors'])) {
+            $message .= ' ' . sprintf(__('Erros: %d', 'ferramentas-upload'), count($result['errors']));
+        }
+
+        wp_send_json_success(array(
+            'message' => $message,
+            'applied' => $result['applied'],
+            'errors' => $result['errors']
+        ));
     }
 
     public function output_faq_structured_data() {
