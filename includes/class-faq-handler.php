@@ -60,6 +60,12 @@ class Ferramentas_Upload_FAQ_Handler {
             ));
         }
 
+        // Valida o FAQ extraído
+        $validation = $this->validate_faq_data($faq_data, $post_content);
+        if (is_wp_error($validation)) {
+            return $validation;
+        }
+
         return array(
             'faq_data' => $faq_data,
             'post_id' => $post_id,
@@ -124,21 +130,25 @@ Sua tarefa é analisar o conteúdo fornecido e gerar dados estruturados de FAQ (
    CONDIÇÃO B - FAQ IMPLÍCITO (SEM SEÇÃO ESPECÍFICA):
    Se NÃO há seção de FAQ explícita no conteúdo:
    
-   ➡️ AÇÃO: Interprete o conteúdo para criar perguntas e respostas
-   - Procure por títulos (H2, H3, H4) que terminem com ponto de interrogação '?'
+   ➡️ AÇÃO: Procure APENAS por títulos que já são perguntas
+   - Procure por títulos (H2, H3, H4) que terminem EXATAMENTE com ponto de interrogação '?'
+   - CRÍTICO: Se NÃO encontrar títulos terminando com '?', retorne IMEDIATAMENTE json_ld com mainEntity vazio
+   - CRÍTICO: NUNCA transforme títulos que não são perguntas em perguntas
+   - CRÍTICO: NUNCA crie perguntas a partir de títulos informativos como \"Different type of certifications\" ou \"Types of hazards\"
    - Se encontrar títulos em formato de pergunta (terminando com '?'), use-os como perguntas
    - Use os parágrafos IMEDIATAMENTE abaixo de cada título-pergunta como respostas
-   - IMPORTANTE: Apenas utilize títulos que terminem com '?' - ignore títulos que não sejam perguntas
    - Se encontrar MENOS de 2 títulos com '?', retorne json_ld com mainEntity vazio
    - Se encontrar 2 ou mais títulos com '?', processe TODOS eles
    - Mantenha o texto dos parágrafos EXATAMENTE como está - com resalva de que se o parágrafo for extremamente extenso (mais de 500 palavras), pode considerar realizar um resumo daquela resposta
 
-3. VALIDAÇÃO DE TÍTULOS:
-   - ANTES de usar um título como pergunta, verifique se está em formato interrogativo
-   - Se o título já é uma pergunta (termina com ?)
-   - Se o título NÃO é pergunta: não transformar ele em pergunta e desconsiderar esse título
+3. VALIDAÇÃO DE TÍTULOS - REGRAS CRÍTICAS:
+   - ANTES de usar um título como pergunta, verifique se termina EXATAMENTE com '?'
+   - Se o título já é uma pergunta (termina com ?): use diretamente
+   - Se o título NÃO termina com '?': DESCONSIDERE COMPLETAMENTE - não transforme, não crie pergunta
+   - NUNCA transforme títulos informativos em perguntas (ex: \"Different type of certifications\" → NÃO vira \"What are the different types of certifications?\")
    - NUNCA invente perguntas que não tenham resposta no texto
    - NUNCA use títulos que não tenham parágrafo explicativo abaixo
+   - Se o conteúdo for apenas informativo sem perguntas explícitas: retorne json_ld com mainEntity vazio
 
 4. PRESERVAÇÃO DO TEXTO:
    - Mantenha TODO o texto original
@@ -169,9 +179,13 @@ Sua tarefa é analisar o conteúdo fornecido e gerar dados estruturados de FAQ (
      }
    }
 
-6. CASOS ESPECIAIS:
-   - Se não houver conteúdo suficiente para gerar FAQ: retorne json_ld com mainEntity vazio
-   - Mínimo de 2 perguntas, máximo de 10 perguntas
+6. CASOS ESPECIAIS - QUANDO NÃO GERAR FAQ:
+   - Se o conteúdo for apenas informativo sem perguntas explícitas (ex: artigo sobre \"Different type of certifications\", \"Types of hazards\", etc.)
+   - Se não houver títulos terminando com '?' E não houver seção de FAQ explícita
+   - Se encontrar MENOS de 2 títulos com '?'
+   - Se o conteúdo não tiver estrutura de pergunta e resposta clara
+   - Em TODOS esses casos: retorne {\"status\": \"nao_elegivel\", \"tipo_faq\": \"nenhum\", \"idioma\": \"detectado\", \"quantidade_perguntas\": 0, \"json_ld\": {\"@context\": \"https://schema.org\", \"@type\": \"FAQPage\", \"mainEntity\": []}}
+   - Mínimo de 2 perguntas, máximo de 10 perguntas (se encontrar)
 
 === EXEMPLOS ===
 
@@ -190,9 +204,15 @@ Retorno: Desconsiderar este título pois não termina com '?' e retornar json_ld
 === INSTRUÇÕES FINAIS ===
 
 Analise o conteúdo fornecido abaixo seguindo TODAS as regras acima.
-Identifique primeiro se há FAQ explícito ou se precisa interpretar.
-Mantenha o idioma original do conteúdo.
-Preserve o texto exato sempre que possível.
+
+PASSO 1: Verifique se há seção de FAQ explícita (CONDIÇÃO A)
+PASSO 2: Se NÃO houver, procure por títulos H2/H3/H4 que terminem EXATAMENTE com '?' (CONDIÇÃO B)
+PASSO 3: Se NÃO encontrar títulos com '?', retorne IMEDIATAMENTE json_ld com mainEntity vazio
+PASSO 4: Mantenha o idioma original do conteúdo - se for inglês, FAQ em inglês; se for português, FAQ em português
+PASSO 5: Preserve o texto exato sempre que possível
+
+IMPORTANTE: Se o conteúdo for apenas informativo sem perguntas explícitas, NÃO crie FAQ. Retorne mainEntity vazio.
+
 Retorne APENAS o JSON válido, sem texto adicional antes ou depois.
 
 CONTEÚDO PARA ANÁLISE:";
@@ -390,6 +410,28 @@ Retorne APENAS um JSON válido no formato especificado acima. Nada mais.";
 
         // Parseia a resposta
         $faq_data = $this->parse_faq_response($response);
+        
+        if (empty($faq_data)) {
+            return array(
+                'post_id' => $post_id,
+                'post_title' => $post_title,
+                'url' => $url,
+                'faq' => array()
+            );
+        }
+
+        // Valida o FAQ extraído
+        $validation = $this->validate_faq_data($faq_data, $full_html);
+        if (is_wp_error($validation)) {
+            // Se a validação falhou, retorna sem FAQ (será marcado como erro)
+            return array(
+                'post_id' => $post_id,
+                'post_title' => $post_title,
+                'url' => $url,
+                'faq' => array(),
+                'validation_error' => $validation->get_error_message()
+            );
+        }
 
         return array(
             'post_id' => $post_id,
@@ -1008,6 +1050,99 @@ Retorne APENAS um JSON válido no formato especificado acima. Nada mais.";
         $text = html_entity_decode($text, ENT_QUOTES | ENT_HTML5, 'UTF-8');
         $text = trim($text);
         return $text;
+    }
+
+    /**
+     * Valida o FAQ extraído para garantir qualidade
+     * Verifica: perguntas terminam com '?', idioma preservado, mínimo de perguntas
+     */
+    private function validate_faq_data($faq_data, $original_content) {
+        if (empty($faq_data) || !is_array($faq_data)) {
+            return new WP_Error('invalid_faq', __('FAQ vazio ou inválido.', 'ferramentas-upload'));
+        }
+
+        // Verifica se há pelo menos 2 perguntas
+        if (count($faq_data) < 2) {
+            return new WP_Error('insufficient_faq', __('FAQ deve ter no mínimo 2 perguntas. Conteúdo não elegível para FAQ.', 'ferramentas-upload'));
+        }
+
+        // Detecta idioma do conteúdo original
+        $original_lang = $this->detect_language($original_content);
+        
+        // Valida cada item do FAQ
+        $valid_questions = 0;
+        foreach ($faq_data as $item) {
+            if (!isset($item['question']) || !isset($item['answer'])) {
+                continue;
+            }
+
+            $question = trim($item['question']);
+            $answer = trim($item['answer']);
+
+            // Verifica se a pergunta termina com '?'
+            if (substr($question, -1) !== '?') {
+                return new WP_Error('invalid_question_format', sprintf(
+                    __('FAQ rejeitado: pergunta não termina com "?". Pergunta encontrada: "%s". Conteúdo não elegível - não há perguntas explícitas no texto.', 'ferramentas-upload'),
+                    esc_html(substr($question, 0, 100))
+                ));
+            }
+
+            // Verifica se o idioma da pergunta corresponde ao conteúdo original
+            $question_lang = $this->detect_language($question);
+            if ($original_lang !== 'unknown' && $question_lang !== 'unknown' && $original_lang !== $question_lang) {
+                return new WP_Error('language_mismatch', sprintf(
+                    __('FAQ rejeitado: idioma não preservado. Conteúdo original: %s, FAQ gerado: %s. Pergunta: "%s"', 'ferramentas-upload'),
+                    $original_lang,
+                    $question_lang,
+                    esc_html(substr($question, 0, 100))
+                ));
+            }
+
+            $valid_questions++;
+        }
+
+        // Verifica se há pelo menos 2 perguntas válidas
+        if ($valid_questions < 2) {
+            return new WP_Error('insufficient_valid_questions', __('FAQ deve ter no mínimo 2 perguntas válidas terminando com "?".', 'ferramentas-upload'));
+        }
+
+        return true;
+    }
+
+    /**
+     * Detecta o idioma de um texto (simples - verifica palavras comuns)
+     */
+    private function detect_language($text) {
+        $text = strtolower($text);
+        
+        // Palavras comuns em inglês
+        $english_words = array('the', 'and', 'or', 'but', 'in', 'on', 'at', 'to', 'for', 'of', 'with', 'by', 'from', 'as', 'is', 'are', 'was', 'were', 'be', 'been', 'have', 'has', 'had', 'do', 'does', 'did', 'will', 'would', 'should', 'could', 'may', 'might', 'must', 'can');
+        
+        // Palavras comuns em português
+        $portuguese_words = array('o', 'a', 'os', 'as', 'um', 'uma', 'uns', 'umas', 'de', 'da', 'do', 'das', 'dos', 'em', 'na', 'no', 'nas', 'nos', 'para', 'por', 'com', 'sem', 'sobre', 'entre', 'até', 'desde', 'que', 'qual', 'quais', 'como', 'quando', 'onde', 'porque', 'porquê', 'é', 'são', 'foi', 'foram', 'ser', 'estar', 'ter', 'haver', 'fazer', 'dizer', 'ir', 'vir', 'ver', 'dar', 'saber', 'poder', 'querer', 'dever');
+        
+        $english_count = 0;
+        $portuguese_count = 0;
+        
+        foreach ($english_words as $word) {
+            if (preg_match('/\b' . preg_quote($word, '/') . '\b/', $text)) {
+                $english_count++;
+            }
+        }
+        
+        foreach ($portuguese_words as $word) {
+            if (preg_match('/\b' . preg_quote($word, '/') . '\b/', $text)) {
+                $portuguese_count++;
+            }
+        }
+        
+        if ($english_count > $portuguese_count && $english_count > 3) {
+            return 'en';
+        } elseif ($portuguese_count > $english_count && $portuguese_count > 3) {
+            return 'pt-BR';
+        }
+        
+        return 'unknown';
     }
 
     /**
