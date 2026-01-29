@@ -77,7 +77,7 @@ class Ferramentas_Upload_Admin_Page {
 
     private function render_page_header() {
         // Enfileira os estilos customizados com versão para cache busting
-        wp_enqueue_style('fu-admin-styles', plugins_url('includes/admin-styles.css', dirname(__FILE__)), array(), '2.0.0');
+        wp_enqueue_style('fu-admin-styles', plugins_url('includes/admin-styles.css', dirname(__FILE__)), array(), '2.0.1');
         
         echo '<div class="ferramentas-upload-wrapper">';
         echo '<div class="fu-header">';
