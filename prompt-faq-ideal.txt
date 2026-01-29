@@ -9,7 +9,9 @@ Sua tarefa é analisar o conteúdo fornecido e gerar dados estruturados de FAQ (
    - Se o conteúdo for em inglês, todas as perguntas e respostas devem ser em inglês
    - Se o conteúdo for em português, todas as perguntas e respostas devem ser em português
    - Se o conteúdo for em espanhol, todas as perguntas e respostas devem ser em espanhol
+   - IMPORTANTE: Analise CADA conteúdo individualmente e mantenha seu idioma original
    - NUNCA traduza o conteúdo
+   - NUNCA ignore conteúdo em um idioma diferente - processe cada conteúdo no seu próprio idioma
 
 2. ANÁLISE DO CONTEÚDO - DUAS CONDIÇÕES:
 

@@ -248,29 +248,60 @@ class Ferramentas_Upload_Loader {
             wp_send_json_error(array('message' => $results->get_error_message()));
         }
 
-        if (empty($results)) {
-            wp_send_json_error(array('message' => __('Nenhum post elegível encontrado nas URLs fornecidas.', 'ferramentas-upload')));
+        // Verifica se há resultados (sucessos ou erros)
+        $success_count = isset($results['success']) ? count($results['success']) : 0;
+        $errors_count = isset($results['errors']) ? count($results['errors']) : 0;
+
+        if ($success_count === 0 && $errors_count === 0) {
+            wp_send_json_error(array('message' => __('Nenhum post encontrado nas URLs fornecidas.', 'ferramentas-upload')));
         }
 
-        // Gera CSV de resultados
-        $csv_result = $handler->generate_results_csv($results);
+        // Gera CSVs de resultados (sucessos e erros)
+        $csv_results = $handler->generate_results_csv($results);
         
-        if (is_wp_error($csv_result)) {
-            wp_send_json_error(array('message' => $csv_result->get_error_message()));
+        if (is_wp_error($csv_results)) {
+            wp_send_json_error(array('message' => $csv_results->get_error_message()));
         }
 
-        // Lê o arquivo e envia como download
-        $file_content = file_get_contents($csv_result['filepath']);
-        $file_content_base64 = base64_encode($file_content);
+        // Prepara arquivos para download
+        $files_data = array();
         
-        // Remove arquivo temporário
-        unlink($csv_result['filepath']);
+        // CSV de sucessos
+        if (isset($csv_results['success_csv'])) {
+            $success_file = $csv_results['success_csv'];
+            $success_content = file_get_contents($success_file['filepath']);
+            $files_data['success'] = array(
+                'filename' => $success_file['filename'],
+                'file_content' => base64_encode($success_content),
+                'count' => $success_count
+            );
+            unlink($success_file['filepath']);
+        }
+        
+        // CSV de erros
+        if (isset($csv_results['errors_csv'])) {
+            $error_file = $csv_results['errors_csv'];
+            $error_content = file_get_contents($error_file['filepath']);
+            $files_data['errors'] = array(
+                'filename' => $error_file['filename'],
+                'file_content' => base64_encode($error_content),
+                'count' => $errors_count
+            );
+            unlink($error_file['filepath']);
+        }
+
+        // Mensagem de sucesso
+        $message = sprintf(
+            __('Análise concluída! %d posts com FAQ encontrados, %d posts sem FAQ ou com erro.', 'ferramentas-upload'),
+            $success_count,
+            $errors_count
+        );
 
         wp_send_json_success(array(
-            'message' => sprintf(__('Análise concluída! %d posts elegíveis encontrados.', 'ferramentas-upload'), count($results)),
-            'filename' => $csv_result['filename'],
-            'file_content' => $file_content_base64,
-            'results_count' => count($results)
+            'message' => $message,
+            'files' => $files_data,
+            'success_count' => $success_count,
+            'errors_count' => $errors_count
         ));
     }
 

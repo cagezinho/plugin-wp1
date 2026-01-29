@@ -103,7 +103,9 @@ Sua tarefa é analisar o conteúdo fornecido e gerar dados estruturados de FAQ (
    - Se o conteúdo for em inglês, todas as perguntas e respostas devem ser em inglês
    - Se o conteúdo for em português, todas as perguntas e respostas devem ser em português
    - Se o conteúdo for em espanhol, todas as perguntas e respostas devem ser em espanhol
+   - IMPORTANTE: Analise CADA conteúdo individualmente e mantenha seu idioma original
    - NUNCA traduza o conteúdo
+   - NUNCA ignore conteúdo em um idioma diferente - processe cada conteúdo no seu próprio idioma
 
 2. ANÁLISE DO CONTEÚDO - DUAS CONDIÇÕES:
 
@@ -273,9 +275,31 @@ Retorne APENAS um JSON válido no formato especificado acima. Nada mais.";
 
         // Analisa cada URL
         $results = array();
+        $errors = array();
+        
         foreach ($urls as $url) {
             $analysis = $this->analyze_post_by_url($url);
-            if (!is_wp_error($analysis) && !empty($analysis['faq'])) {
+            
+            if (is_wp_error($analysis)) {
+                // Erro na análise
+                $errors[] = array(
+                    'url' => $url,
+                    'post_id' => 0,
+                    'post_title' => '',
+                    'error' => $analysis->get_error_message(),
+                    'error_code' => $analysis->get_error_code()
+                );
+            } elseif (empty($analysis['faq'])) {
+                // Análise bem-sucedida mas sem FAQ encontrado
+                $errors[] = array(
+                    'url' => $url,
+                    'post_id' => isset($analysis['post_id']) ? $analysis['post_id'] : 0,
+                    'post_title' => isset($analysis['post_title']) ? $analysis['post_title'] : '',
+                    'error' => __('Nenhum FAQ encontrado no conteúdo. O conteúdo pode não ter títulos em formato de pergunta ou seção de FAQ explícita.', 'ferramentas-upload'),
+                    'error_code' => 'no_faq_found'
+                );
+            } else {
+                // Sucesso - FAQ encontrado
                 $results[] = array(
                     'url' => $url,
                     'post_id' => $analysis['post_id'],
@@ -285,7 +309,10 @@ Retorne APENAS um JSON válido no formato especificado acima. Nada mais.";
             }
         }
 
-        return $results;
+        return array(
+            'success' => $results,
+            'errors' => $errors
+        );
     }
 
     /**
@@ -424,28 +451,63 @@ Retorne APENAS um JSON válido no formato especificado acima. Nada mais.";
     }
 
     /**
-     * Gera CSV com os resultados da análise
-     * Formato: URL, Post ID, Post Title, Question1, Answer1, Question2, Answer2, ...
+     * Gera CSVs com os resultados da análise (sucessos e erros separados)
+     * Retorna array com dois arquivos: success_csv e errors_csv
      */
-    public function generate_results_csv($results) {
-        if (empty($results)) {
+    public function generate_results_csv($results_data) {
+        // Compatibilidade: se receber array simples (formato antigo), converte
+        if (isset($results_data['success']) || isset($results_data['errors'])) {
+            $success_results = isset($results_data['success']) ? $results_data['success'] : array();
+            $error_results = isset($results_data['errors']) ? $results_data['errors'] : array();
+        } else {
+            // Formato antigo - assume que são todos sucessos
+            $success_results = $results_data;
+            $error_results = array();
+        }
+
+        $timestamp = date('Y-m-d-H-i-s');
+        $return_data = array();
+
+        // Gera CSV de sucessos
+        if (!empty($success_results)) {
+            $success_file = $this->generate_success_csv($success_results, $timestamp);
+            if (!is_wp_error($success_file)) {
+                $return_data['success_csv'] = $success_file;
+            }
+        }
+
+        // Gera CSV de erros
+        if (!empty($error_results)) {
+            $error_file = $this->generate_errors_csv($error_results, $timestamp);
+            if (!is_wp_error($error_file)) {
+                $return_data['errors_csv'] = $error_file;
+            }
+        }
+
+        if (empty($return_data)) {
             return new WP_Error('no_results', __('Nenhum resultado para exportar.', 'ferramentas-upload'));
         }
 
-        $filename = 'faq-analysis-results-' . date('Y-m-d-H-i-s') . '.csv';
+        return $return_data;
+    }
+
+    /**
+     * Gera CSV com resultados de sucesso
+     * Formato: URL, Post ID, Post Title, Question1, Answer1, Question2, Answer2, ...
+     */
+    private function generate_success_csv($results, $timestamp) {
+        $filename = 'faq-analysis-success-' . $timestamp . '.csv';
         $filepath = sys_get_temp_dir() . '/' . $filename;
 
         $handle = fopen($filepath, 'w');
         if ($handle === false) {
-            return new WP_Error('file_write_error', __('Erro ao criar arquivo CSV.', 'ferramentas-upload'));
+            return new WP_Error('file_write_error', __('Erro ao criar arquivo CSV de sucessos.', 'ferramentas-upload'));
         }
 
         // Adiciona BOM para melhor compatibilidade com Excel em UTF-8
         fwrite($handle, "\xEF\xBB\xBF");
 
-        // Cabeçalho dinâmico - começa com URL, Post ID, Post Title
-        // Depois adiciona Question1, Answer1, Question2, Answer2, etc.
-        // Primeiro, encontra o número máximo de perguntas para criar cabeçalho completo
+        // Encontra o número máximo de perguntas para criar cabeçalho completo
         $max_faq_count = 0;
         foreach ($results as $result) {
             if (!empty($result['faq']) && is_array($result['faq'])) {
@@ -499,7 +561,51 @@ Retorne APENAS um JSON válido no formato especificado acima. Nada mais.";
     }
 
     /**
+     * Gera CSV com resultados de erros e justificativas
+     * Formato: URL, Post ID, Post Title, Erro, Justificativa
+     */
+    private function generate_errors_csv($errors, $timestamp) {
+        $filename = 'faq-analysis-errors-' . $timestamp . '.csv';
+        $filepath = sys_get_temp_dir() . '/' . $filename;
+
+        $handle = fopen($filepath, 'w');
+        if ($handle === false) {
+            return new WP_Error('file_write_error', __('Erro ao criar arquivo CSV de erros.', 'ferramentas-upload'));
+        }
+
+        // Adiciona BOM para melhor compatibilidade com Excel em UTF-8
+        fwrite($handle, "\xEF\xBB\xBF");
+
+        // Cabeçalho
+        $header = array('URL', 'Post ID', 'Post Title', 'Código do Erro', 'Justificativa/Erro');
+        fputcsv($handle, $header);
+
+        // Dados
+        foreach ($errors as $error) {
+            $row = array(
+                $error['url'],
+                isset($error['post_id']) ? $error['post_id'] : '',
+                isset($error['post_title']) ? $error['post_title'] : '',
+                isset($error['error_code']) ? $error['error_code'] : 'unknown',
+                isset($error['error']) ? $error['error'] : __('Erro desconhecido', 'ferramentas-upload')
+            );
+            fputcsv($handle, $row);
+        }
+
+        fclose($handle);
+
+        return array(
+            'filepath' => $filepath,
+            'filename' => $filename
+        );
+    }
+
+    /**
      * Processa CSV revisado e aplica nos posts
+     */
+    /**
+     * Processa CSV revisado e aplica nos posts
+     * Formato esperado: URL, Post ID, Post Title, Question1, Answer1, Question2, Answer2, ...
      */
     public function process_reviewed_csv($csv_file_path) {
         if (!file_exists($csv_file_path)) {
@@ -511,13 +617,19 @@ Retorne APENAS um JSON válido no formato especificado acima. Nada mais.";
             return new WP_Error('file_read_error', __('Erro ao ler arquivo CSV.', 'ferramentas-upload'));
         }
 
+        // Adiciona BOM para melhor compatibilidade com Excel em UTF-8
+        $bom = fread($handle, 3);
+        if ($bom !== "\xEF\xBB\xBF") {
+            rewind($handle);
+        }
+
         // Lê cabeçalho
         $header = fgetcsv($handle);
         
-        // Verifica se o cabeçalho tem o formato esperado
-        if (empty($header) || count($header) < 5) {
+        // Verifica se o cabeçalho tem o formato esperado (mínimo: URL, Post ID, Post Title)
+        if (empty($header) || count($header) < 3) {
             fclose($handle);
-            return new WP_Error('invalid_format', __('Formato de CSV inválido. Esperado: URL, Post ID, Post Title, Question, Answer', 'ferramentas-upload'));
+            return new WP_Error('invalid_format', __('Formato de CSV inválido. Esperado: URL, Post ID, Post Title, Question1, Answer1, Question2, Answer2, ...', 'ferramentas-upload'));
         }
         
         // Agrupa FAQ por post
@@ -532,17 +644,16 @@ Retorne APENAS um JSON válido no formato especificado acima. Nada mais.";
                 continue;
             }
             
-            if (count($row) < 5) {
+            if (count($row) < 3) {
                 continue; // Linha incompleta, pula
             }
             
             $url = trim($row[0]);
             $post_id = intval($row[1]);
-            $question = trim($row[3]);
-            $answer = trim($row[4]);
+            $post_title = isset($row[2]) ? trim($row[2]) : '';
             
-            // Valida dados obrigatórios
-            if (empty($url) || $post_id <= 0 || empty($question) || empty($answer)) {
+            // Valida dados obrigatórios básicos
+            if (empty($url) || $post_id <= 0) {
                 continue; // Dados inválidos, pula
             }
             
@@ -552,14 +663,30 @@ Retorne APENAS um JSON válido no formato especificado acima. Nada mais.";
                 continue; // Post não existe, pula
             }
             
-            if (!isset($posts_faq[$post_id])) {
-                $posts_faq[$post_id] = array();
+            // Extrai todas as perguntas e respostas da linha
+            // Começa do índice 3 (após URL, Post ID, Post Title)
+            $faq_items = array();
+            for ($i = 3; $i < count($row); $i += 2) {
+                $question = isset($row[$i]) ? trim($row[$i]) : '';
+                $answer = isset($row[$i + 1]) ? trim($row[$i + 1]) : '';
+                
+                // Se encontrou uma pergunta e resposta válidas, adiciona
+                if (!empty($question) && !empty($answer)) {
+                    $faq_items[] = array(
+                        'question' => $question,
+                        'answer' => $answer
+                    );
+                }
             }
             
-            $posts_faq[$post_id][] = array(
-                'question' => $question,
-                'answer' => $answer
-            );
+            // Se encontrou pelo menos uma pergunta/resposta, adiciona ao array
+            if (!empty($faq_items)) {
+                if (!isset($posts_faq[$post_id])) {
+                    $posts_faq[$post_id] = array();
+                }
+                // Adiciona todas as perguntas/respostas encontradas
+                $posts_faq[$post_id] = array_merge($posts_faq[$post_id], $faq_items);
+            }
         }
         
         fclose($handle);

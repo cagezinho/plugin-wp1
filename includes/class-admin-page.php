@@ -819,21 +819,47 @@ class Ferramentas_Upload_Admin_Page {
                         $('#fu_process_urls_btn').prop('disabled', false);
                         
                         if (response.success) {
-                            // Cria link de download
-                            var blob = base64ToBlob(response.data.file_content, 'text/csv');
-                            var url = window.URL.createObjectURL(blob);
-                            var a = document.createElement('a');
-                            a.href = url;
-                            a.download = response.data.filename;
-                            document.body.appendChild(a);
-                            a.click();
-                            window.URL.revokeObjectURL(url);
-                            document.body.removeChild(a);
+                            var message = response.data.message;
+                            var filesHtml = '';
+                            
+                            // Baixa CSV de sucessos se existir
+                            if (response.data.files && response.data.files.success) {
+                                var successFile = response.data.files.success;
+                                var blob = base64ToBlob(successFile.file_content, 'text/csv');
+                                var url = window.URL.createObjectURL(blob);
+                                var a = document.createElement('a');
+                                a.href = url;
+                                a.download = successFile.filename;
+                                document.body.appendChild(a);
+                                a.click();
+                                window.URL.revokeObjectURL(url);
+                                document.body.removeChild(a);
+                                
+                                filesHtml += '<p><strong><?php echo esc_js(__('CSV de Sucessos:', 'ferramentas-upload')); ?></strong> ' + successFile.filename + ' (<?php echo esc_js(__('baixado automaticamente', 'ferramentas-upload')); ?>)</p>';
+                            }
+                            
+                            // Baixa CSV de erros se existir
+                            if (response.data.files && response.data.files.errors) {
+                                var errorFile = response.data.files.errors;
+                                var blob = base64ToBlob(errorFile.file_content, 'text/csv');
+                                var url = window.URL.createObjectURL(blob);
+                                var a = document.createElement('a');
+                                a.href = url;
+                                a.download = errorFile.filename;
+                                document.body.appendChild(a);
+                                a.click();
+                                window.URL.revokeObjectURL(url);
+                                document.body.removeChild(a);
+                                
+                                filesHtml += '<p><strong><?php echo esc_js(__('CSV de Erros:', 'ferramentas-upload')); ?></strong> ' + errorFile.filename + ' (<?php echo esc_js(__('baixado automaticamente', 'ferramentas-upload')); ?>)</p>';
+                                filesHtml += '<p class="fu-form-description"><?php echo esc_js(__('Revise o CSV de erros para entender por que algumas URLs não geraram FAQ. Use essas informações para ajustar o prompt se necessário.', 'ferramentas-upload')); ?></p>';
+                            }
                             
                             $('#fu_urls_result').html(
                                 '<div class="fu-notice success">' +
-                                '<p>' + response.data.message + '</p>' +
-                                '<p><?php echo esc_js(__('CSV baixado automaticamente. Revise e faça upload novamente na seção "Aplicar CSV Revisado".', 'ferramentas-upload')); ?></p>' +
+                                '<p>' + message + '</p>' +
+                                filesHtml +
+                                '<p><?php echo esc_js(__('Revise os CSVs e faça upload do CSV de sucessos na seção "Aplicar CSV Revisado" para aplicar os FAQs nos posts.', 'ferramentas-upload')); ?></p>' +
                                 '</div>'
                             ).show();
                         } else {
