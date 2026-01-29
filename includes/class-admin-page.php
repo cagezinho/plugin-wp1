@@ -76,14 +76,14 @@ class Ferramentas_Upload_Admin_Page {
     }
 
     private function render_page_header() {
-        // Enfileira os estilos customizados
-        wp_enqueue_style('fu-admin-styles', plugins_url('includes/admin-styles.css', dirname(__FILE__)), array(), '1.0.0');
+        // Enfileira os estilos customizados com versão para cache busting
+        wp_enqueue_style('fu-admin-styles', plugins_url('includes/admin-styles.css', dirname(__FILE__)), array(), '2.0.0');
         
         echo '<div class="ferramentas-upload-wrapper">';
         echo '<div class="fu-header">';
         echo '<h1>';
         echo '<span class="fu-logo">';
-        echo '<svg viewBox="0 0 500 500" xmlns="http://www.w3.org/2000/svg">';
+        echo '<svg viewBox="0 0 500 500" xmlns="http://www.w3.org/2000/svg" width="40" height="40">';
         echo '<circle cx="250" cy="250" r="200" fill="#a4286a"/>';
         echo '<path d="M250 150 L350 350 L150 350 Z" fill="white"/>';
         echo '</svg>';
