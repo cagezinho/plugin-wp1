@@ -92,33 +92,106 @@ class Ferramentas_Upload_FAQ_Handler {
      * Retorna o prompt padrão caso o usuário não tenha configurado
      */
     private function get_default_prompt() {
-        return "Você é um especialista em SEO técnico e dados estruturados.
+        return "Você é um especialista em SEO técnico e dados estruturados Schema.org.
 
-Sua tarefa é:
-1. Analisar o conteúdo fornecido
-2. Identificar se há FAQ explícito, implícito ou nenhum
-3. Gerar JSON-LD válido seguindo Schema.org
-4. Nunca inventar informações
-5. Seguir estritamente as diretrizes de rich results do Google
+Sua tarefa é analisar o conteúdo fornecido e gerar dados estruturados de FAQ (FAQPage) seguindo estritamente as regras abaixo.
 
-REGRAS OBRIGATÓRIAS:
-✅ O que PODE:
-- Reescrever respostas mantendo sentido original
-- Resumir respostas longas
-- Unificar perguntas redundantes
+=== REGRAS FUNDAMENTAIS ===
 
-❌ O que NÃO PODE:
-- Inventar perguntas não respondidas no texto
-- Criar respostas que não existam implicitamente
-- Fazer conteúdo promocional
-- Gerar FAQ para páginas não informativas
+1. IDIOMA:
+   - O FAQ deve ser gerado NO MESMO IDIOMA do conteúdo fornecido
+   - Se o conteúdo for em inglês, todas as perguntas e respostas devem ser em inglês
+   - Se o conteúdo for em português, todas as perguntas e respostas devem ser em português
+   - Se o conteúdo for em espanhol, todas as perguntas e respostas devem ser em espanhol
+   - NUNCA traduza o conteúdo
 
-Se não houver conteúdo elegível, informe claramente e NÃO gere JSON-LD.
+2. ANÁLISE DO CONTEÚDO - DUAS CONDIÇÕES:
 
-Retorne APENAS um JSON válido no formato:
-{\"faq\": [{\"question\": \"Pergunta 1\", \"answer\": \"Resposta 1\"}, {\"question\": \"Pergunta 2\", \"answer\": \"Resposta 2\"}]}
+   CONDIÇÃO A - FAQ EXPLÍCITO DETECTADO:
+   Se o conteúdo contém uma seção claramente identificada como:
+   - \"Perguntas Frequentes\" / \"FAQ\" / \"Frequently Asked Questions\"
+   - \"Perguntas e Respostas\" / \"Questions and Answers\"
+   - Ou qualquer seção com estrutura clara de pergunta + resposta
+   
+   ➡️ AÇÃO: Extraia EXATAMENTE as perguntas e respostas dessa seção
+   - Use o texto EXATO das perguntas encontradas
+   - Use o texto EXATO das respostas encontradas
+   - Não reescreva, não resuma, não modifique
+   - Mantenha a formatação e estrutura original
 
-Crie entre 3 e 10 perguntas e respostas baseadas no conteúdo fornecido.";
+   CONDIÇÃO B - FAQ IMPLÍCITO (SEM SEÇÃO ESPECÍFICA):
+   Se NÃO há seção de FAQ explícita no conteúdo:
+   
+   ➡️ AÇÃO: Interprete o conteúdo para criar perguntas e respostas
+   - Use títulos (H2, H3) como base para perguntas
+   - IMPORTATE: Existem no mínimo dois títulos que seguem essa regras de terminar com um ponto de interrogação
+   - Use os parágrafos abaixo de cada título como respostas
+   - IMPORTANTE: Se o título NÃO estiver em formato de pergunta, não considerar. Apenas utilize títulos que possuam de fato pontos de interrogação '?'
+   - Mantenha o texto dos parágrafos EXATAMENTE como está - com resalva de que se o paragrafo for extremamente extenso, pode se considerar realizar um resumo daquela resposta
+
+3. VALIDAÇÃO DE TÍTULOS:
+   - ANTES de usar um título como pergunta, verifique se está em formato interrogativo
+   - Se o título já é uma pergunta (termina com ?)
+   - Se o título NÃO é pergunta: não transformar ele em pergunta e desconsiderar esse título
+   - NUNCA invente perguntas que não tenham resposta no texto
+   - NUNCA use títulos que não tenham parágrafo explicativo abaixo
+
+4. PRESERVAÇÃO DO TEXTO:
+   - Mantenha TODO o texto original
+   - Resuma respostas extremamente longas
+   - Não adicione informações que não existam no conteúdo
+   - Preserve a formatação e estrutura do texto original
+
+5. ESTRUTURA DO RETORNO:
+   Retorne APENAS um JSON válido no formato:
+   {
+     \"status\": \"faq_detectado\" ou \"faq_implicito\" ou \"nao_elegivel\",
+     \"tipo_faq\": \"explicito\" ou \"implicito\" ou \"nenhum\",
+     \"idioma\": \"pt-BR\" ou \"en\" ou outro detectado,
+     \"quantidade_perguntas\": número,
+     \"json_ld\": {
+       \"@context\": \"https://schema.org\",
+       \"@type\": \"FAQPage\",
+       \"mainEntity\": [
+         {
+           \"@type\": \"Question\",
+           \"name\": \"Pergunta exata do texto\",
+           \"acceptedAnswer\": {
+             \"@type\": \"Answer\",
+             \"text\": \"Resposta exata do texto\"
+           }
+         }
+       ]
+     }
+   }
+
+6. CASOS ESPECIAIS:
+   - Se não houver conteúdo suficiente para gerar FAQ: retorne json_ld com mainEntity vazio
+   - Mínimo de 2 perguntas, máximo de 10 perguntas
+
+=== EXEMPLOS ===
+
+Exemplo 1 - FAQ Explícito:
+Conteúdo: \"... texto ... Perguntas Frequentes: 1. Como funciona? R: Funciona assim... 2. Quanto custa? R: Custa X...\"
+Retorno: Extrair exatamente as perguntas e respostas da seção FAQ
+
+Exemplo 2 - FAQ Implícito:
+Conteúdo: \"... texto ... Como funciona o sistema? O sistema funciona através de... Quais são os benefícios? Os benefícios incluem...\"
+Retorno: Usar títulos como perguntas e parágrafos como respostas
+
+Exemplo 3 - Título não é pergunta:
+Conteúdo: \"... Benefícios do produto: O produto oferece...\"
+Retorno: Transformar em \"Quais são os benefícios do produto?\" e usar o parágrafo como resposta
+
+=== INSTRUÇÕES FINAIS ===
+
+Analise o conteúdo fornecido abaixo seguindo TODAS as regras acima.
+Identifique primeiro se há FAQ explícito ou se precisa interpretar.
+Mantenha o idioma original do conteúdo.
+Preserve o texto exato sempre que possível.
+Retorne APENAS o JSON válido, sem texto adicional antes ou depois.
+
+CONTEÚDO PARA ANÁLISE:";
     }
 
     /**
@@ -350,6 +423,7 @@ Retorne APENAS um JSON válido no formato especificado acima. Nada mais.";
 
     /**
      * Gera CSV com os resultados da análise
+     * Formato: URL, Post ID, Post Title, Question1, Answer1, Question2, Answer2, ...
      */
     public function generate_results_csv($results) {
         if (empty($results)) {
@@ -364,22 +438,54 @@ Retorne APENAS um JSON válido no formato especificado acima. Nada mais.";
             return new WP_Error('file_write_error', __('Erro ao criar arquivo CSV.', 'ferramentas-upload'));
         }
 
-        // Cabeçalho
-        fputcsv($handle, array('URL', 'Post ID', 'Post Title', 'Question', 'Answer'));
+        // Adiciona BOM para melhor compatibilidade com Excel em UTF-8
+        fwrite($handle, "\xEF\xBB\xBF");
 
-        // Dados
+        // Cabeçalho dinâmico - começa com URL, Post ID, Post Title
+        // Depois adiciona Question1, Answer1, Question2, Answer2, etc.
+        // Primeiro, encontra o número máximo de perguntas para criar cabeçalho completo
+        $max_faq_count = 0;
         foreach ($results as $result) {
             if (!empty($result['faq']) && is_array($result['faq'])) {
-                foreach ($result['faq'] as $faq_item) {
-                    fputcsv($handle, array(
-                        $result['url'],
-                        $result['post_id'],
-                        $result['post_title'],
-                        $faq_item['question'],
-                        $faq_item['answer']
-                    ));
+                $count = count($result['faq']);
+                if ($count > $max_faq_count) {
+                    $max_faq_count = $count;
                 }
             }
+        }
+
+        // Monta cabeçalho
+        $header = array('URL', 'Post ID', 'Post Title');
+        for ($i = 1; $i <= $max_faq_count; $i++) {
+            $header[] = 'Question' . $i;
+            $header[] = 'Answer' . $i;
+        }
+        fputcsv($handle, $header);
+
+        // Dados - agrupa todas perguntas/respostas de uma URL na mesma linha
+        foreach ($results as $result) {
+            $row = array(
+                $result['url'],
+                $result['post_id'],
+                $result['post_title']
+            );
+
+            if (!empty($result['faq']) && is_array($result['faq'])) {
+                foreach ($result['faq'] as $faq_item) {
+                    $row[] = $faq_item['question'];
+                    $row[] = $faq_item['answer'];
+                }
+            }
+
+            // Preenche com valores vazios se tiver menos FAQ que o máximo
+            $current_faq_count = !empty($result['faq']) ? count($result['faq']) : 0;
+            $missing_pairs = $max_faq_count - $current_faq_count;
+            for ($i = 0; $i < $missing_pairs; $i++) {
+                $row[] = '';
+                $row[] = '';
+            }
+
+            fputcsv($handle, $row);
         }
 
         fclose($handle);
