@@ -1,80 +1,109 @@
 /**
- * Estilos customizados inspirados no Yoast SEO
+ * Estilos modernos e responsivos
  * Plugin: Ferramentas Upload
+ * Versão: 2.0 - Design Moderno
  */
 
 /* Reset e base */
 .ferramentas-upload-wrapper {
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen-Sans, Ubuntu, Cantarell, "Helvetica Neue", sans-serif;
-    background: #f0f0f1;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    background: #f5f5f7;
     margin: -20px -20px 0;
     padding: 0;
+    min-height: 100vh;
 }
 
-/* Header do plugin */
+/* Header moderno com logo fixa */
 .fu-header {
-    background: #fff;
-    border-bottom: 1px solid #dcdcde;
-    padding: 24px 32px;
-    margin-bottom: 24px;
+    background: linear-gradient(135deg, #ffffff 0%, #fafafa 100%);
+    border-bottom: 1px solid #e5e5e7;
+    padding: 20px 40px;
+    margin-bottom: 0;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+    position: sticky;
+    top: 32px;
+    z-index: 100;
+    backdrop-filter: blur(10px);
 }
 
 .fu-header h1 {
     margin: 0;
     padding: 0;
-    font-size: 24px;
-    font-weight: 400;
-    color: #1e1e1e;
+    font-size: 28px;
+    font-weight: 600;
+    color: #1d1d1f;
     display: flex;
     align-items: center;
+    gap: 16px;
+    letter-spacing: -0.5px;
 }
 
+/* Logo fixa - sem animação de resize */
 .fu-logo {
     display: inline-flex;
     align-items: center;
-    margin-right: 12px;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    flex-shrink: 0;
+    margin: 0;
 }
 
 .fu-logo svg {
-    width: 32px;
-    height: 32px;
+    width: 40px !important;
+    height: 40px !important;
+    display: block;
+    flex-shrink: 0;
+    will-change: auto;
+    transform: none !important;
+    transition: none !important;
+    max-width: 40px !important;
+    max-height: 40px !important;
 }
 
-/* Navegação de abas estilo sidebar */
+/* Container principal moderno */
 .fu-main-container {
     display: flex;
     gap: 0;
-    max-width: 1400px;
+    max-width: 1600px;
     margin: 0 auto;
     background: #fff;
+    box-shadow: 0 0 1px rgba(0, 0, 0, 0.1);
+    min-height: calc(100vh - 120px);
 }
 
+/* Sidebar moderna */
 .fu-sidebar {
     width: 280px;
-    background: #fff;
-    border-right: 1px solid #dcdcde;
-    min-height: calc(100vh - 150px);
+    background: #ffffff;
+    border-right: 1px solid #e5e5e7;
+    min-height: calc(100vh - 120px);
+    position: sticky;
+    top: 132px;
+    align-self: flex-start;
+    max-height: calc(100vh - 132px);
+    overflow-y: auto;
 }
 
 .fu-sidebar-header {
-    padding: 20px 24px;
-    border-bottom: 1px solid #dcdcde;
-    background: #f6f7f7;
+    padding: 24px;
+    border-bottom: 1px solid #e5e5e7;
+    background: linear-gradient(135deg, #fafafa 0%, #ffffff 100%);
 }
 
 .fu-sidebar-title {
     margin: 0;
-    font-size: 14px;
-    font-weight: 600;
-    color: #1e1e1e;
+    font-size: 13px;
+    font-weight: 700;
+    color: #1d1d1f;
     text-transform: uppercase;
-    letter-spacing: 0.5px;
+    letter-spacing: 1px;
 }
 
 .fu-sidebar-subtitle {
-    margin: 4px 0 0;
-    font-size: 13px;
-    color: #757575;
+    margin: 6px 0 0;
+    font-size: 12px;
+    color: #86868b;
     font-weight: 400;
 }
 
@@ -89,122 +118,172 @@
 }
 
 .fu-nav-tab a {
-    display: block;
+    display: flex;
+    align-items: center;
     padding: 14px 24px;
-    color: #1e1e1e;
+    color: #1d1d1f;
     text-decoration: none;
     font-size: 14px;
     font-weight: 500;
     border-left: 3px solid transparent;
-    transition: all 0.2s ease;
-}
-
-.fu-nav-tab a:hover {
-    background: #f6f7f7;
-    color: #a4286a;
-}
-
-.fu-nav-tab a.active {
-    background: #f6f7f7;
-    border-left-color: #a4286a;
-    color: #a4286a;
-}
-
-/* Conteúdo principal */
-.fu-content {
-    flex: 1;
-    padding: 32px;
-    background: #fff;
-    overflow-y: auto;
-}
-
-.fu-content-header {
-    margin-bottom: 24px;
-}
-
-.fu-content-title {
-    font-size: 20px;
-    font-weight: 600;
-    color: #1e1e1e;
-    margin: 0 0 12px;
-}
-
-.fu-content-description {
-    font-size: 14px;
-    line-height: 1.6;
-    color: #3c434a;
-    margin: 0 0 8px;
-}
-
-/* Cards de features */
-.fu-features-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-    gap: 20px;
-    margin: 24px 0;
-}
-
-.fu-feature-card {
-    background: #fff;
-    border: 1px solid #dcdcde;
-    border-radius: 8px;
-    padding: 24px;
-    transition: all 0.2s ease;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
     position: relative;
 }
 
+.fu-nav-tab a::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 0;
+    background: linear-gradient(90deg, rgba(164, 40, 106, 0.1) 0%, transparent 100%);
+    transition: width 0.2s ease;
+}
+
+.fu-nav-tab a:hover {
+    background: #fafafa;
+    color: #a4286a;
+}
+
+.fu-nav-tab a:hover::before {
+    width: 100%;
+}
+
+.fu-nav-tab a.active {
+    background: linear-gradient(90deg, rgba(164, 40, 106, 0.08) 0%, transparent 100%);
+    border-left-color: #a4286a;
+    color: #a4286a;
+    font-weight: 600;
+}
+
+.fu-nav-tab a.active::before {
+    width: 100%;
+}
+
+/* Conteúdo principal moderno */
+.fu-content {
+    flex: 1;
+    padding: 40px;
+    background: #ffffff;
+    overflow-y: auto;
+    min-height: calc(100vh - 120px);
+}
+
+.fu-content-header {
+    margin-bottom: 32px;
+}
+
+.fu-content-title {
+    font-size: 32px;
+    font-weight: 700;
+    color: #1d1d1f;
+    margin: 0 0 12px;
+    letter-spacing: -0.8px;
+    line-height: 1.2;
+}
+
+.fu-content-description {
+    font-size: 15px;
+    line-height: 1.6;
+    color: #515154;
+    margin: 0 0 8px;
+}
+
+/* Cards de features modernos */
+.fu-features-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 24px;
+    margin: 32px 0;
+}
+
+.fu-feature-card {
+    background: #ffffff;
+    border: 1px solid #e5e5e7;
+    border-radius: 12px;
+    padding: 28px;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    overflow: hidden;
+}
+
+.fu-feature-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, #a4286a 0%, #8f1f5e 100%);
+    transform: scaleX(0);
+    transition: transform 0.3s ease;
+}
+
 .fu-feature-card:hover {
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
     border-color: #a4286a;
+    transform: translateY(-2px);
+}
+
+.fu-feature-card:hover::before {
+    transform: scaleX(1);
 }
 
 .fu-feature-card h4 {
     margin: 0 0 12px;
-    font-size: 16px;
+    font-size: 18px;
     font-weight: 600;
-    color: #1e1e1e;
+    color: #1d1d1f;
 }
 
 .fu-feature-card p {
     margin: 0 0 16px;
     font-size: 14px;
-    line-height: 1.5;
-    color: #3c434a;
+    line-height: 1.6;
+    color: #515154;
 }
 
 .fu-feature-icon {
-    width: 60px;
-    height: 60px;
-    margin-bottom: 16px;
+    width: 64px;
+    height: 64px;
+    margin-bottom: 20px;
     display: flex;
     align-items: center;
     justify-content: center;
     background: linear-gradient(135deg, #a4286a 0%, #8f1f5e 100%);
-    border-radius: 8px;
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(164, 40, 106, 0.2);
 }
 
-/* Forms */
+/* Forms modernos */
 .fu-form {
-    max-width: 700px;
+    max-width: 800px;
 }
 
 .fu-form-section {
-    background: #fff;
-    border: 1px solid #dcdcde;
-    border-radius: 8px;
-    padding: 24px;
-    margin-bottom: 20px;
+    background: #ffffff;
+    border: 1px solid #e5e5e7;
+    border-radius: 12px;
+    padding: 32px;
+    margin-bottom: 24px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+    transition: box-shadow 0.2s ease;
+}
+
+.fu-form-section:hover {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
 }
 
 .fu-form-section h4 {
-    margin: 0 0 16px;
-    font-size: 16px;
+    margin: 0 0 20px;
+    font-size: 18px;
     font-weight: 600;
-    color: #1e1e1e;
+    color: #1d1d1f;
 }
 
 .fu-form-group {
-    margin-bottom: 20px;
+    margin-bottom: 24px;
 }
 
 .fu-form-group:last-child {
@@ -213,35 +292,53 @@
 
 .fu-form-label {
     display: block;
-    margin-bottom: 8px;
+    margin-bottom: 10px;
     font-size: 14px;
     font-weight: 600;
-    color: #1e1e1e;
+    color: #1d1d1f;
+}
+
+.fu-form-input {
+    width: 100%;
+    padding: 12px 16px;
+    font-size: 14px;
+    border: 1px solid #d2d2d7;
+    border-radius: 8px;
+    background: #ffffff;
+    transition: all 0.2s ease;
+    font-family: inherit;
+    box-sizing: border-box;
+}
+
+.fu-form-input:focus {
+    outline: none;
+    border-color: #a4286a;
+    box-shadow: 0 0 0 3px rgba(164, 40, 106, 0.1);
 }
 
 .fu-form-input[type="file"] {
-    display: block;
-    width: 100%;
-    padding: 8px 12px;
-    font-size: 14px;
-    border: 1px solid #8c8f94;
-    border-radius: 4px;
-    background: #fff;
+    padding: 10px;
+    cursor: pointer;
+}
+
+.fu-form-input[type="file"]:hover {
+    border-color: #a4286a;
 }
 
 .fu-form-description {
     margin-top: 8px;
     font-size: 13px;
-    color: #646970;
+    color: #86868b;
     line-height: 1.5;
 }
 
 .fu-form-notice {
     background: #f0f6fc;
     border-left: 4px solid #2271b1;
-    padding: 12px 16px;
-    margin: 16px 0;
-    border-radius: 4px;
+    padding: 16px 20px;
+    margin: 20px 0;
+    border-radius: 8px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
 }
 
 .fu-form-notice.warning {
@@ -257,7 +354,7 @@
 .fu-form-notice p {
     margin: 0;
     font-size: 14px;
-    line-height: 1.5;
+    line-height: 1.6;
 }
 
 .fu-form-notice strong {
@@ -273,40 +370,71 @@
     margin-bottom: 4px;
 }
 
-/* Botões */
+/* Botões modernos */
 .fu-button {
-    display: inline-block;
-    padding: 10px 24px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 12px 28px;
     font-size: 14px;
-    font-weight: 500;
+    font-weight: 600;
     text-decoration: none;
     border: none;
-    border-radius: 4px;
+    border-radius: 8px;
     cursor: pointer;
-    transition: all 0.2s ease;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
     line-height: 1.5;
+    font-family: inherit;
+    position: relative;
+    overflow: hidden;
+}
+
+.fu-button::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 0;
+    height: 0;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.2);
+    transform: translate(-50%, -50%);
+    transition: width 0.6s, height 0.6s;
+}
+
+.fu-button:hover::before {
+    width: 300px;
+    height: 300px;
 }
 
 .fu-button-primary {
-    background: #a4286a;
-    color: #fff;
+    background: linear-gradient(135deg, #a4286a 0%, #8f1f5e 100%);
+    color: #ffffff;
     border: 1px solid #a4286a;
+    box-shadow: 0 2px 8px rgba(164, 40, 106, 0.2);
 }
 
 .fu-button-primary:hover {
-    background: #8f1f5e;
+    background: linear-gradient(135deg, #8f1f5e 0%, #7a1a4f 100%);
     border-color: #8f1f5e;
-    color: #fff;
+    color: #ffffff;
+    box-shadow: 0 4px 12px rgba(164, 40, 106, 0.3);
+    transform: translateY(-1px);
+}
+
+.fu-button-primary:active {
+    transform: translateY(0);
+    box-shadow: 0 2px 4px rgba(164, 40, 106, 0.2);
 }
 
 .fu-button-secondary {
-    background: #fff;
+    background: #ffffff;
     color: #2271b1;
     border: 1px solid #2271b1;
 }
 
 .fu-button-secondary:hover {
-    background: #f6f7f7;
+    background: #fafafa;
     color: #135e96;
     border-color: #135e96;
 }
@@ -316,46 +444,56 @@
     display: inline-flex;
     align-items: center;
     gap: 8px;
-    padding: 8px 16px;
-    background: #f6f7f7;
-    border: 1px solid #dcdcde;
-    color: #1e1e1e;
+    padding: 10px 20px;
+    background: #fafafa;
+    border: 1px solid #e5e5e7;
+    color: #1d1d1f;
     text-decoration: none;
-    border-radius: 4px;
+    border-radius: 8px;
     font-size: 13px;
     font-weight: 500;
     transition: all 0.2s ease;
 }
 
 .fu-button-download:hover {
-    background: #fff;
+    background: #ffffff;
     border-color: #a4286a;
     color: #a4286a;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
 }
 
-/* Notices (mensagens de sucesso/erro) */
+.fu-button-download svg {
+    opacity: 0.7;
+    transition: opacity 0.2s ease;
+}
+
+.fu-button-download:hover svg {
+    opacity: 1;
+}
+
+/* Notices modernos */
 .fu-notice {
-    margin: 20px 0;
-    padding: 16px 20px;
+    margin: 24px 0;
+    padding: 20px 24px;
     border-left: 4px solid;
-    border-radius: 4px;
-    background: #fff;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+    border-radius: 8px;
+    background: #ffffff;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
 }
 
 .fu-notice.success {
     border-left-color: #00a32a;
-    background: #f0f6fc;
+    background: linear-gradient(90deg, #f0fdf4 0%, #ffffff 100%);
 }
 
 .fu-notice.error {
     border-left-color: #d63638;
-    background: #fcf0f1;
+    background: linear-gradient(90deg, #fef2f2 0%, #ffffff 100%);
 }
 
 .fu-notice.warning {
     border-left-color: #dba617;
-    background: #fcf9e8;
+    background: linear-gradient(90deg, #fffbeb 0%, #ffffff 100%);
 }
 
 .fu-notice p {
@@ -379,12 +517,13 @@
     line-height: 1.5;
 }
 
-/* Badges */
+/* Badges modernos */
 .fu-badge {
-    display: inline-block;
-    padding: 4px 10px;
-    font-size: 12px;
-    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    padding: 4px 12px;
+    font-size: 11px;
+    font-weight: 700;
     border-radius: 12px;
     text-transform: uppercase;
     letter-spacing: 0.5px;
@@ -396,16 +535,16 @@
 }
 
 .fu-badge-premium {
-    background: #f0e5f5;
+    background: linear-gradient(135deg, #f0e5f5 0%, #e8d5f0 100%);
     color: #a4286a;
 }
 
-/* Toggle switch */
+/* Toggle switch moderno */
 .fu-toggle {
     position: relative;
     display: inline-block;
-    width: 48px;
-    height: 24px;
+    width: 52px;
+    height: 28px;
 }
 
 .fu-toggle input {
@@ -421,32 +560,44 @@
     left: 0;
     right: 0;
     bottom: 0;
-    background-color: #8c8f94;
-    transition: 0.3s;
-    border-radius: 24px;
+    background-color: #d2d2d7;
+    transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    border-radius: 28px;
 }
 
 .fu-toggle-slider:before {
     position: absolute;
     content: "";
-    height: 18px;
-    width: 18px;
+    height: 22px;
+    width: 22px;
     left: 3px;
     bottom: 3px;
     background-color: white;
-    transition: 0.3s;
+    transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     border-radius: 50%;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
 }
 
 .fu-toggle input:checked + .fu-toggle-slider {
-    background-color: #a4286a;
+    background: linear-gradient(135deg, #a4286a 0%, #8f1f5e 100%);
 }
 
 .fu-toggle input:checked + .fu-toggle-slider:before {
     transform: translateX(24px);
 }
 
-/* Responsividade */
+/* Responsividade moderna */
+@media (max-width: 1200px) {
+    .fu-content {
+        padding: 32px;
+    }
+    
+    .fu-features-grid {
+        grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+        gap: 20px;
+    }
+}
+
 @media (max-width: 1024px) {
     .fu-main-container {
         flex-direction: column;
@@ -455,19 +606,42 @@
     .fu-sidebar {
         width: 100%;
         border-right: none;
-        border-bottom: 1px solid #dcdcde;
+        border-bottom: 1px solid #e5e5e7;
+        position: relative;
+        top: 0;
+        max-height: none;
     }
     
     .fu-nav-tabs {
         display: flex;
         overflow-x: auto;
         padding: 0;
+        scrollbar-width: thin;
+        scrollbar-color: #d2d2d7 transparent;
+    }
+    
+    .fu-nav-tabs::-webkit-scrollbar {
+        height: 6px;
+    }
+    
+    .fu-nav-tabs::-webkit-scrollbar-track {
+        background: transparent;
+    }
+    
+    .fu-nav-tabs::-webkit-scrollbar-thumb {
+        background: #d2d2d7;
+        border-radius: 3px;
+    }
+    
+    .fu-nav-tab {
+        flex-shrink: 0;
     }
     
     .fu-nav-tab a {
         white-space: nowrap;
         border-left: none;
         border-bottom: 3px solid transparent;
+        padding: 16px 20px;
     }
     
     .fu-nav-tab a.active {
@@ -476,7 +650,7 @@
     }
     
     .fu-content {
-        padding: 20px;
+        padding: 24px;
     }
     
     .fu-features-grid {
@@ -486,15 +660,76 @@
 
 @media (max-width: 768px) {
     .fu-header {
-        padding: 16px 20px;
+        padding: 16px 24px;
+        top: 46px;
+    }
+    
+    .fu-header h1 {
+        font-size: 24px;
+    }
+    
+    .fu-logo {
+        width: 36px;
+        height: 36px;
+    }
+    
+    .fu-logo svg {
+        width: 36px !important;
+        height: 36px !important;
+    }
+    
+    .fu-content {
+        padding: 20px;
+    }
+    
+    .fu-content-title {
+        font-size: 26px;
+    }
+    
+    .fu-form-section {
+        padding: 24px;
+    }
+    
+    .fu-button {
+        width: 100%;
+        justify-content: center;
+    }
+}
+
+@media (max-width: 480px) {
+    .fu-header {
+        padding: 12px 16px;
     }
     
     .fu-header h1 {
         font-size: 20px;
+        gap: 12px;
+    }
+    
+    .fu-logo {
+        width: 32px;
+        height: 32px;
+    }
+    
+    .fu-logo svg {
+        width: 32px !important;
+        height: 32px !important;
+    }
+    
+    .fu-content {
+        padding: 16px;
+    }
+    
+    .fu-content-title {
+        font-size: 22px;
+    }
+    
+    .fu-form-section {
+        padding: 20px;
     }
 }
 
-/* Animações */
+/* Animações suaves */
 @keyframes fadeIn {
     from {
         opacity: 0;
@@ -507,23 +742,25 @@
 }
 
 .fu-content {
-    animation: fadeIn 0.3s ease;
+    animation: fadeIn 0.4s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-/* Link "Saiba mais" */
+/* Link "Saiba mais" moderno */
 .fu-learn-more {
     display: inline-flex;
     align-items: center;
-    gap: 4px;
+    gap: 6px;
     color: #a4286a;
     text-decoration: none;
-    font-size: 13px;
+    font-size: 14px;
     font-weight: 500;
     margin-top: 8px;
+    transition: all 0.2s ease;
 }
 
 .fu-learn-more:hover {
     color: #8f1f5e;
+    gap: 8px;
 }
 
 .fu-learn-more::after {
@@ -535,17 +772,17 @@
     transform: translateX(4px);
 }
 
-/* Esconde as abas antigas do WordPress */
+/* Esconde abas antigas do WordPress */
 .ferramentas-upload-wrapper .nav-tab-wrapper {
     display: none;
 }
 
-/* Ajustes para mensagens dentro do conteúdo */
+/* Ajustes para mensagens */
 .fu-content > .fu-notice:first-child {
     margin-top: 0;
 }
 
-/* Estilo para listas dentro de descrições */
+/* Estilo para listas */
 .fu-content-description + ul,
 .fu-form-section ul {
     margin: 12px 0 16px 24px;
@@ -555,46 +792,95 @@
 .fu-content-description + ul li,
 .fu-form-section ul li {
     margin-bottom: 8px;
-    line-height: 1.5;
+    line-height: 1.6;
     font-size: 14px;
-    color: #3c434a;
+    color: #515154;
 }
 
-/* Melhorias no hover dos botões de download */
-.fu-button-download svg {
-    opacity: 0.7;
-    transition: opacity 0.2s ease;
-}
-
-.fu-button-download:hover svg {
-    opacity: 1;
-}
-
-/* Espaçamento entre formulário e botão de download */
+/* Espaçamento entre formulário e botão */
 .fu-form + .fu-button-download,
 form + .fu-button-download {
     margin-top: 20px;
 }
 
-/* Ajustes para garantir que o layout funcione bem */
+/* Ajustes de layout */
 .fu-content {
     min-height: 400px;
 }
 
-/* Estilo para strong dentro de parágrafos */
+/* Estilo para strong */
 .fu-content-description strong,
 .fu-form-notice strong {
     font-weight: 600;
-    color: #1e1e1e;
+    color: #1d1d1f;
 }
 
-/* Efeito hover suave no menu lateral */
+/* Scroll suave */
+.fu-content,
 .fu-sidebar {
-    transition: background-color 0.2s ease;
-}
-
-/* Scroll suave no conteúdo */
-.fu-content {
     scroll-behavior: smooth;
 }
 
+/* Melhorias de acessibilidade */
+.fu-button:focus,
+.fu-nav-tab a:focus,
+.fu-form-input:focus {
+    outline: 2px solid #a4286a;
+    outline-offset: 2px;
+}
+
+/* Loading states */
+.fu-loading {
+    opacity: 0.6;
+    pointer-events: none;
+}
+
+/* Checkbox group moderno */
+.fu-checkbox-group {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 12px;
+    margin: 20px 0;
+}
+
+.fu-checkbox-group label {
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+    padding: 12px 16px;
+    border: 1px solid #e5e5e7;
+    border-radius: 8px;
+    transition: all 0.2s ease;
+    background: #ffffff;
+}
+
+.fu-checkbox-group label:hover {
+    background: #fafafa;
+    border-color: #a4286a;
+}
+
+.fu-checkbox-group input[type="checkbox"] {
+    margin-right: 12px;
+    width: 18px;
+    height: 18px;
+    cursor: pointer;
+    accent-color: #a4286a;
+}
+
+/* Textarea moderno */
+.fu-form-input[type="textarea"],
+textarea.fu-form-input {
+    min-height: 120px;
+    resize: vertical;
+    font-family: inherit;
+}
+
+/* Select moderno */
+select.fu-form-input {
+    cursor: pointer;
+    background-image: url("data:image/svg+xml,%3Csvg width='12' height='8' viewBox='0 0 12 8' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1L6 6L11 1' stroke='%231d1d1f' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+    padding-right: 40px;
+    appearance: none;
+}
