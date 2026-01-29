@@ -123,11 +123,13 @@ Sua tarefa é analisar o conteúdo fornecido e gerar dados estruturados de FAQ (
    Se NÃO há seção de FAQ explícita no conteúdo:
    
    ➡️ AÇÃO: Interprete o conteúdo para criar perguntas e respostas
-   - Use títulos (H2, H3) como base para perguntas
-   - IMPORTATE: Existem no mínimo dois títulos que seguem essa regras de terminar com um ponto de interrogação
-   - Use os parágrafos abaixo de cada título como respostas
-   - IMPORTANTE: Se o título NÃO estiver em formato de pergunta, não considerar. Apenas utilize títulos que possuam de fato pontos de interrogação '?'
-   - Mantenha o texto dos parágrafos EXATAMENTE como está - com resalva de que se o paragrafo for extremamente extenso, pode se considerar realizar um resumo daquela resposta
+   - Procure por títulos (H2, H3, H4) que terminem com ponto de interrogação '?'
+   - Se encontrar títulos em formato de pergunta (terminando com '?'), use-os como perguntas
+   - Use os parágrafos IMEDIATAMENTE abaixo de cada título-pergunta como respostas
+   - IMPORTANTE: Apenas utilize títulos que terminem com '?' - ignore títulos que não sejam perguntas
+   - Se encontrar MENOS de 2 títulos com '?', retorne json_ld com mainEntity vazio
+   - Se encontrar 2 ou mais títulos com '?', processe TODOS eles
+   - Mantenha o texto dos parágrafos EXATAMENTE como está - com resalva de que se o parágrafo for extremamente extenso (mais de 500 palavras), pode considerar realizar um resumo daquela resposta
 
 3. VALIDAÇÃO DE TÍTULOS:
    - ANTES de usar um título como pergunta, verifique se está em formato interrogativo
@@ -176,12 +178,12 @@ Conteúdo: \"... texto ... Perguntas Frequentes: 1. Como funciona? R: Funciona a
 Retorno: Extrair exatamente as perguntas e respostas da seção FAQ
 
 Exemplo 2 - FAQ Implícito:
-Conteúdo: \"... texto ... Como funciona o sistema? O sistema funciona através de... Quais são os benefícios? Os benefícios incluem...\"
-Retorno: Usar títulos como perguntas e parágrafos como respostas
+Conteúdo: \"... texto ... <h2>Como funciona o sistema?</h2> <p>O sistema funciona através de...</p> <h2>Quais são os benefícios?</h2> <p>Os benefícios incluem...</p>\"
+Retorno: Usar os títulos H2 que terminam com '?' como perguntas e os parágrafos P abaixo como respostas
 
 Exemplo 3 - Título não é pergunta:
-Conteúdo: \"... Benefícios do produto: O produto oferece...\"
-Retorno: Transformar em \"Quais são os benefícios do produto?\" e usar o parágrafo como resposta
+Conteúdo: \"... <h2>Benefícios do produto</h2> <p>O produto oferece...</p>\"
+Retorno: Desconsiderar este título pois não termina com '?' e retornar json_ld com mainEntity vazio (a menos que existam outros títulos com '?')
 
 === INSTRUÇÕES FINAIS ===
 
