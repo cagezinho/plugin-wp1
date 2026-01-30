@@ -9,8 +9,10 @@ if (!defined('ABSPATH')) {
 
 class Ferramentas_Upload_Post_Exporter {
     private $selected_fields = array();
-    /** @var string XPath opcional para extrair apenas parte do HTML de cada post. */
-    private $export_xpath = '';
+        /** @var string XPath opcional para extrair apenas parte do HTML de cada post. */
+        private $export_xpath = '';
+        /** @var bool Se true, aplica XPath no HTML da página completa (fetch da URL); senão usa só o conteúdo do post. */
+        private $export_xpath_full_page = false;
 
     public function export_posts_categories() {
         // Garante que a constante FU_TEXT_DOMAIN está definida
@@ -28,9 +30,10 @@ class Ferramentas_Upload_Post_Exporter {
             $this->selected_fields = $this->get_default_fields();
         }
 
-        // XPath opcional para extração (ex.: //h2 | //h3)
+        // XPath opcional para extração (ex.: //h2 | //h3 ou XPath do DevTools)
         $this->export_xpath = isset($_POST['fu_export_xpath']) ? sanitize_text_field(wp_unslash($_POST['fu_export_xpath'])) : '';
         $this->export_xpath = trim($this->export_xpath);
+        $this->export_xpath_full_page = !empty($_POST['fu_export_xpath_full_page']);
 
         $filename = 'posts_com_conteudo_completo-' . date('Y-m-d_H-i-s') . '.csv';
 
@@ -198,42 +201,96 @@ class Ferramentas_Upload_Post_Exporter {
     }
 
     /**
-     * Extrai conteúdo do post aplicando um XPath (ex.: //h2 | //h3).
-     * Se o XPath não retornar nós ou falhar, retorna o conteúdo completo.
+     * Extrai conteúdo do post aplicando um XPath.
+     * Se export_xpath_full_page estiver ativo, usa o HTML da página completa (fetch da URL).
+     * Caso contrário, usa apenas o conteúdo bruto do post. Fallback: conteúdo completo.
      *
      * @param int $post_id ID do post.
      * @return string Texto extraído (um por linha) ou conteúdo completo em fallback.
      */
     private function get_post_content_by_xpath($post_id) {
-        $content = get_post_field('post_content', $post_id);
-        if (empty($content)) {
-            return '';
-        }
-
         $xpath_expr = $this->export_xpath;
         if (empty($xpath_expr)) {
             return $this->get_post_content($post_id);
         }
 
+        if ($this->export_xpath_full_page) {
+            $content = $this->fetch_full_page_html($post_id);
+        } else {
+            $content = get_post_field('post_content', $post_id);
+            if (!empty($content)) {
+                $content = '<div id="fu-xpath-root">' . $content . '</div>';
+            }
+        }
+
+        if (empty($content)) {
+            return $this->get_post_content($post_id);
+        }
+
+        $result = $this->apply_xpath_to_html($content, $xpath_expr);
+        if ($result !== null) {
+            return $result;
+        }
+
+        return $this->get_post_content($post_id);
+    }
+
+    /**
+     * Busca o HTML da página completa do post pela URL (mesmo que o DevTools mostra).
+     *
+     * @param int $post_id ID do post.
+     * @return string HTML da página ou string vazia em caso de falha.
+     */
+    private function fetch_full_page_html($post_id) {
+        $url = get_permalink($post_id);
+        if (empty($url)) {
+            return '';
+        }
+
+        $response = wp_remote_get($url, array(
+            'timeout' => 15,
+            'sslverify' => true,
+            'user-agent' => 'Ferramentas-Upload-Export/1.0',
+        ));
+
+        if (is_wp_error($response)) {
+            return '';
+        }
+
+        $code = wp_remote_retrieve_response_code($response);
+        if ($code !== 200) {
+            return '';
+        }
+
+        $body = wp_remote_retrieve_body($response);
+        return is_string($body) ? $body : '';
+    }
+
+    /**
+     * Aplica XPath ao HTML e retorna o texto dos nós encontrados (um por linha).
+     *
+     * @param string $html HTML completo (página ou fragmento).
+     * @param string $xpath_expr Expressão XPath.
+     * @return string|null Texto extraído ou null se falhar.
+     */
+    private function apply_xpath_to_html($html, $xpath_expr) {
         libxml_use_internal_errors(true);
         $dom = new DOMDocument();
-        // Wrapper para ter um único root (conteúdo do post pode ter vários elementos no topo)
-        $wrap = '<div id="fu-xpath-root">' . $content . '</div>';
         $loaded = @$dom->loadHTML(
-            mb_convert_encoding($wrap, 'HTML-ENTITIES', 'UTF-8'),
+            mb_convert_encoding($html, 'HTML-ENTITIES', 'UTF-8'),
             LIBXML_HTML_NOIMPLIED | LIBXML_HTML_NODEFDTD
         );
         libxml_clear_errors();
 
         if (!$loaded) {
-            return $this->get_post_content($post_id);
+            return null;
         }
 
         $xpath = new DOMXPath($dom);
         $nodes = @$xpath->query($xpath_expr);
 
         if ($nodes === false || $nodes->length === 0) {
-            return $this->get_post_content($post_id);
+            return null;
         }
 
         $parts = array();
@@ -245,12 +302,10 @@ class Ferramentas_Upload_Post_Exporter {
         }
 
         if (empty($parts)) {
-            return $this->get_post_content($post_id);
+            return null;
         }
 
         $result = implode("\n", $parts);
-
-        // Mesmo tratamento que get_post_content para CSV
         $result = str_replace(["\r\n", "\r"], "\n", $result);
         $result = str_replace('"', '""', $result);
 

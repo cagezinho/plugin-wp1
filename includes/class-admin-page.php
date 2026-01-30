@@ -372,12 +372,19 @@ class Ferramentas_Upload_Admin_Page {
                             id="fu_export_xpath"
                             name="fu_export_xpath"
                             value=""
-                            placeholder="Ex.: //h2 | //h3  ou  //*[@class='entry-content']//h2 | //h3"
+                            placeholder="Ex.: //h2 | //h3  ou  //*[@id='wtr-content']/h2  ou  /html/body/div[10]/div/div/main/article//h2"
                             class="fu-form-input"
                             style="max-width: 100%; font-family: monospace;"
                         >
                         <p class="fu-form-description" style="margin-top: 8px;">
-                            <?php esc_html_e('Se preenchido, a coluna "HTML do Post" exportará apenas o conteúdo extraído por este XPath (ex.: títulos H2/H3). Deixe em branco para exportar o HTML completo.', 'ferramentas-upload'); ?>
+                            <?php esc_html_e('Se preenchido, a coluna "HTML do Post" exportará apenas o conteúdo extraído por este XPath. Use XPaths copiados do DevTools (Inspecionar).', 'ferramentas-upload'); ?>
+                        </p>
+                        <label style="display: flex; align-items: center; margin-top: 10px; cursor: pointer;">
+                            <input type="checkbox" name="fu_export_xpath_full_page" value="1" id="fu_export_xpath_full_page" style="margin-right: 8px;">
+                            <span><?php esc_html_e('Usar HTML da página completa (buscar URL do post)', 'ferramentas-upload'); ?></span>
+                        </label>
+                        <p class="fu-form-description" style="margin-top: 6px; margin-left: 24px;">
+                            <?php esc_html_e('Marque esta opção quando o XPath foi copiado do DevTools na página do post (ex.: /html/body/... ou //*[@id="wtr-content"]/...). Sem marcar, o XPath é aplicado apenas ao conteúdo bruto do post.', 'ferramentas-upload'); ?>
                         </p>
                     </div>
                     
