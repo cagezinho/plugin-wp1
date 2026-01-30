@@ -525,6 +525,8 @@ class Ferramentas_Upload_Admin_Page {
         $api_key = get_option('fu_faq_api_key', '');
         $prompt = get_option('fu_faq_prompt', '');
         $api_url = get_option('fu_faq_api_url', 'https://api.openai.com/v1/chat/completions');
+        $delay_between_urls = (int) get_option('fu_faq_delay_between_urls', 12);
+        $gemini_model = get_option('fu_faq_gemini_model', 'gemini-2.0-flash');
         
         // Enfileira scripts necessários
         wp_enqueue_script('jquery');
@@ -616,6 +618,44 @@ class Ferramentas_Upload_Admin_Page {
                         </p>
                     </div>
 
+                    <div class="fu-form-group">
+                        <label for="fu_faq_delay_between_urls" class="fu-form-label">
+                            <?php esc_html_e('Intervalo entre análises (segundos)', 'ferramentas-upload'); ?>
+                        </label>
+                        <input 
+                            type="number" 
+                            id="fu_faq_delay_between_urls" 
+                            name="fu_faq_delay_between_urls" 
+                            value="<?php echo esc_attr($delay_between_urls); ?>" 
+                            min="12" 
+                            max="120" 
+                            step="1"
+                            class="fu-form-input"
+                            style="max-width: 100px;"
+                        >
+                        <p class="fu-form-description">
+                            <?php esc_html_e('Tempo de espera entre cada URL na análise em massa. Use 12–15 segundos para respeitar limite de 5 requisições/minuto (5 RPM). Mínimo: 12, máximo: 120.', 'ferramentas-upload'); ?>
+                        </p>
+                    </div>
+
+                    <div class="fu-form-group">
+                        <label for="fu_faq_gemini_model" class="fu-form-label">
+                            <?php esc_html_e('Modelo Gemini (Google)', 'ferramentas-upload'); ?>
+                        </label>
+                        <input 
+                            type="text" 
+                            id="fu_faq_gemini_model" 
+                            name="fu_faq_gemini_model" 
+                            value="<?php echo esc_attr($gemini_model); ?>" 
+                            placeholder="gemini-2.0-flash"
+                            class="fu-form-input"
+                            style="max-width: 220px;"
+                        >
+                        <p class="fu-form-description">
+                            <?php esc_html_e('Nome do modelo usado na API Google (ex.: gemini-2.0-flash, gemini-3-flash-preview). Um único modelo é usado para não exceder o limite de requisições.', 'ferramentas-upload'); ?>
+                        </p>
+                    </div>
+
                     <button type="submit" class="fu-button fu-button-primary">
                         <?php esc_html_e('Salvar Configurações', 'ferramentas-upload'); ?>
                     </button>
@@ -627,6 +667,9 @@ class Ferramentas_Upload_Admin_Page {
                 <p class="fu-content-description">
                     <?php esc_html_e('Faça upload de um CSV com URLs de posts para análise automática. O sistema irá identificar posts elegíveis e gerar um CSV com perguntas e respostas para revisão.', 'ferramentas-upload'); ?>
                 </p>
+                <div class="fu-form-notice" style="margin: 12px 0; padding: 10px 14px; background: #f0f6fc; border-left: 4px solid #2271b1;">
+                    <p><strong><?php esc_html_e('Limites de API:', 'ferramentas-upload'); ?></strong> <?php esc_html_e('Com limite de 5 RPM e 20 RPD (ex.: Gemini 3 Flash), recomendamos até 4–5 URLs por execução. O processo pode levar alguns minutos devido ao intervalo entre requisições.', 'ferramentas-upload'); ?></p>
+                </div>
 
                 <div class="fu-form-notice" style="margin: 20px 0;">
                     <p><strong><?php esc_html_e('Como funciona:', 'ferramentas-upload'); ?></strong></p>

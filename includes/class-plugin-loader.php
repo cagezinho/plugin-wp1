@@ -166,11 +166,19 @@ class Ferramentas_Upload_Loader {
             $api_key = isset($_POST['fu_faq_api_key']) ? sanitize_text_field($_POST['fu_faq_api_key']) : '';
             $prompt = isset($_POST['fu_faq_prompt']) ? wp_kses_post($_POST['fu_faq_prompt']) : '';
             $api_url = isset($_POST['fu_faq_api_url']) ? esc_url_raw($_POST['fu_faq_api_url']) : 'https://api.openai.com/v1/chat/completions';
-            
+            $delay = isset($_POST['fu_faq_delay_between_urls']) ? (int) $_POST['fu_faq_delay_between_urls'] : 12;
+            $delay = max(12, min(120, $delay));
+            $gemini_model = isset($_POST['fu_faq_gemini_model']) ? sanitize_text_field($_POST['fu_faq_gemini_model']) : 'gemini-2.0-flash';
+            if (empty(trim($gemini_model))) {
+                $gemini_model = 'gemini-2.0-flash';
+            }
+
             update_option('fu_faq_api_key', $api_key);
             update_option('fu_faq_prompt', $prompt);
             update_option('fu_faq_api_url', $api_url);
-            
+            update_option('fu_faq_delay_between_urls', $delay);
+            update_option('fu_faq_gemini_model', $gemini_model);
+
             wp_redirect(add_query_arg(array('tab' => 'faq', 'settings_saved' => '1'), admin_url('admin.php?page=' . FU_PAGE_SLUG)));
             exit;
         }
