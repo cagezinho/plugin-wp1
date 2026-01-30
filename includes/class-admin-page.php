@@ -362,6 +362,24 @@ class Ferramentas_Upload_Admin_Page {
                             </label>
                         </div>
                     </div>
+
+                    <div class="fu-form-group" style="margin: 24px 0;">
+                        <label for="fu_export_xpath" class="fu-form-label">
+                            <?php esc_html_e('XPath para extração (opcional)', 'ferramentas-upload'); ?>
+                        </label>
+                        <input
+                            type="text"
+                            id="fu_export_xpath"
+                            name="fu_export_xpath"
+                            value=""
+                            placeholder="Ex.: //h2 | //h3  ou  //*[@class='entry-content']//h2 | //h3"
+                            class="fu-form-input"
+                            style="max-width: 100%; font-family: monospace;"
+                        >
+                        <p class="fu-form-description" style="margin-top: 8px;">
+                            <?php esc_html_e('Se preenchido, a coluna "HTML do Post" exportará apenas o conteúdo extraído por este XPath (ex.: títulos H2/H3). Deixe em branco para exportar o HTML completo.', 'ferramentas-upload'); ?>
+                        </p>
+                    </div>
                     
                     <div class="fu-form-notice" style="margin: 20px 0;">
                         <p><strong><?php esc_html_e('Nota:', 'ferramentas-upload'); ?></strong></p>

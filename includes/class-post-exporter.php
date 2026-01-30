@@ -9,7 +9,9 @@ if (!defined('ABSPATH')) {
 
 class Ferramentas_Upload_Post_Exporter {
     private $selected_fields = array();
-    
+    /** @var string XPath opcional para extrair apenas parte do HTML de cada post. */
+    private $export_xpath = '';
+
     public function export_posts_categories() {
         // Garante que a constante FU_TEXT_DOMAIN está definida
         if (!defined('FU_TEXT_DOMAIN')) {
@@ -17,14 +19,18 @@ class Ferramentas_Upload_Post_Exporter {
         }
 
         // Obtém os campos selecionados
-        $this->selected_fields = isset($_POST['export_fields']) && is_array($_POST['export_fields']) 
-            ? array_map('sanitize_key', $_POST['export_fields']) 
+        $this->selected_fields = isset($_POST['export_fields']) && is_array($_POST['export_fields'])
+            ? array_map('sanitize_key', $_POST['export_fields'])
             : $this->get_default_fields();
-        
+
         // Se nenhum campo foi selecionado, usa os padrões
         if (empty($this->selected_fields)) {
             $this->selected_fields = $this->get_default_fields();
         }
+
+        // XPath opcional para extração (ex.: //h2 | //h3)
+        $this->export_xpath = isset($_POST['fu_export_xpath']) ? sanitize_text_field(wp_unslash($_POST['fu_export_xpath'])) : '';
+        $this->export_xpath = trim($this->export_xpath);
 
         $filename = 'posts_com_conteudo_completo-' . date('Y-m-d_H-i-s') . '.csv';
 
@@ -123,7 +129,11 @@ class Ferramentas_Upload_Post_Exporter {
                     $row_data[] = get_the_title();
                     break;
                 case 'post_html':
-                    $row_data[] = $this->get_post_content($post_id);
+                    if (!empty($this->export_xpath)) {
+                        $row_data[] = $this->get_post_content_by_xpath($post_id);
+                    } else {
+                        $row_data[] = $this->get_post_content($post_id);
+                    }
                     break;
                 case 'author':
                     $row_data[] = $this->get_post_author($post_id);
@@ -171,20 +181,80 @@ class Ferramentas_Upload_Post_Exporter {
     private function get_post_content($post_id) {
         try {
             $content = get_post_field('post_content', $post_id);
-            
+
             // Remove quebras de linha desnecessárias para CSV
             $content = str_replace(["\r\n", "\r", "\n"], ' ', $content);
-            
+
             // Remove espaços múltiplos
             $content = preg_replace('/\s+/', ' ', $content);
-            
+
             // Escapa aspas duplas para CSV
             $content = str_replace('"', '""', $content);
-            
+
             return trim($content);
         } catch (Exception $e) {
             return __('Erro ao obter conteúdo', FU_TEXT_DOMAIN);
         }
+    }
+
+    /**
+     * Extrai conteúdo do post aplicando um XPath (ex.: //h2 | //h3).
+     * Se o XPath não retornar nós ou falhar, retorna o conteúdo completo.
+     *
+     * @param int $post_id ID do post.
+     * @return string Texto extraído (um por linha) ou conteúdo completo em fallback.
+     */
+    private function get_post_content_by_xpath($post_id) {
+        $content = get_post_field('post_content', $post_id);
+        if (empty($content)) {
+            return '';
+        }
+
+        $xpath_expr = $this->export_xpath;
+        if (empty($xpath_expr)) {
+            return $this->get_post_content($post_id);
+        }
+
+        libxml_use_internal_errors(true);
+        $dom = new DOMDocument();
+        // Wrapper para ter um único root (conteúdo do post pode ter vários elementos no topo)
+        $wrap = '<div id="fu-xpath-root">' . $content . '</div>';
+        $loaded = @$dom->loadHTML(
+            mb_convert_encoding($wrap, 'HTML-ENTITIES', 'UTF-8'),
+            LIBXML_HTML_NOIMPLIED | LIBXML_HTML_NODEFDTD
+        );
+        libxml_clear_errors();
+
+        if (!$loaded) {
+            return $this->get_post_content($post_id);
+        }
+
+        $xpath = new DOMXPath($dom);
+        $nodes = @$xpath->query($xpath_expr);
+
+        if ($nodes === false || $nodes->length === 0) {
+            return $this->get_post_content($post_id);
+        }
+
+        $parts = array();
+        foreach ($nodes as $node) {
+            $text = trim($node->textContent);
+            if ($text !== '') {
+                $parts[] = $text;
+            }
+        }
+
+        if (empty($parts)) {
+            return $this->get_post_content($post_id);
+        }
+
+        $result = implode("\n", $parts);
+
+        // Mesmo tratamento que get_post_content para CSV
+        $result = str_replace(["\r\n", "\r"], "\n", $result);
+        $result = str_replace('"', '""', $result);
+
+        return trim($result);
     }
 
     private function get_post_excerpt($post_id) {
