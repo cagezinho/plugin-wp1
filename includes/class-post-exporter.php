@@ -47,7 +47,8 @@ class Ferramentas_Upload_Post_Exporter {
     }
     
     private function get_default_fields() {
-        return array('meta_title', 'meta_description', 'post_title', 'post_html', 'author', 'publish_date', 'url');
+        // Campos padrão exportados quando nenhum é selecionado manualmente
+        return array('post_id', 'meta_title', 'meta_description', 'post_title', 'post_html', 'author', 'publish_date', 'url');
     }
 
     private function set_headers($filename) {
@@ -69,6 +70,7 @@ class Ferramentas_Upload_Post_Exporter {
         
         // Mapeia os campos selecionados para os cabeçalhos
         $field_labels = array(
+            'post_id' => __('ID do Post', FU_TEXT_DOMAIN),
             'meta_title' => __('Meta Title', FU_TEXT_DOMAIN),
             'meta_description' => __('Meta Description', FU_TEXT_DOMAIN),
             'post_title' => __('Título do Post', FU_TEXT_DOMAIN),
@@ -122,6 +124,9 @@ class Ferramentas_Upload_Post_Exporter {
         
         foreach ($this->selected_fields as $field) {
             switch ($field) {
+                case 'post_id':
+                    $row_data[] = $post_id;
+                    break;
                 case 'meta_title':
                     $row_data[] = $this->get_meta_title($post_id);
                     break;

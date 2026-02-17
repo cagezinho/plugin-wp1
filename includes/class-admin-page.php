@@ -307,6 +307,11 @@ class Ferramentas_Upload_Admin_Page {
                     <div class="fu-export-options" style="margin: 20px 0;">
                         <div class="fu-checkbox-group" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px;">
                             <label style="display: flex; align-items: center; cursor: pointer; padding: 10px; border: 1px solid #ddd; border-radius: 4px; transition: background-color 0.2s;">
+                                <input type="checkbox" name="export_fields[]" value="post_id" checked style="margin-right: 10px;">
+                                <span><strong><?php esc_html_e('ID do Post', 'ferramentas-upload'); ?></strong></span>
+                            </label>
+
+                            <label style="display: flex; align-items: center; cursor: pointer; padding: 10px; border: 1px solid #ddd; border-radius: 4px; transition: background-color 0.2s;">
                                 <input type="checkbox" name="export_fields[]" value="meta_title" checked style="margin-right: 10px;">
                                 <span><strong><?php esc_html_e('Meta Title', 'ferramentas-upload'); ?></strong></span>
                             </label>
