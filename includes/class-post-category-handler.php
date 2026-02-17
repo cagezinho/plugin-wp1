@@ -81,14 +81,24 @@ class Ferramentas_Upload_Post_Category_Handler {
 
         if (empty($data[0]) || empty($data[1])) {
             $this->error_log[] = sprintf(
-                __('Linha %d: URL ou categoria vazia. Linha ignorada.', FU_TEXT_DOMAIN),
+                __('Linha %d: URL/ID ou categoria vazia. Linha ignorada.', FU_TEXT_DOMAIN),
                 $this->row_num
             );
             return;
         }
 
-        $url = trim($data[0]);
+        $identifier = trim($data[0]);
         $categories = array_map('trim', explode(',', $data[1]));
+
+        // Se a primeira coluna for um número inteiro, tratamos como ID de post
+        if (ctype_digit($identifier)) {
+            $post_id = (int) $identifier;
+            $this->update_post_categories_by_id($post_id, $categories);
+            return;
+        }
+
+        // Caso contrário, tratamos como URL
+        $url = $identifier;
 
         // Verifica se a URL é do site atual
         $site_url = get_site_url();
@@ -122,33 +132,52 @@ class Ferramentas_Upload_Post_Category_Handler {
         $post_id = url_to_postid($url);
 
         if ($post_id > 0) {
-            $post = get_post($post_id);
-            if ($post) {
-                $category_ids = array();
-                
-                foreach ($categories as $category_name) {
-                    $category_id = $this->get_or_create_category($category_name);
-                    if ($category_id) {
-                        $category_ids[] = $category_id;
-                    }
-                }
-
-                if (!empty($category_ids)) {
-                    wp_set_post_categories($post_id, $category_ids, false);
-                    $this->success_count++;
-                }
-            } else {
-                $this->error_log[] = sprintf(
-                    __('Linha %d: Post com ID %d não encontrado.', FU_TEXT_DOMAIN),
-                    $this->row_num,
-                    $post_id
-                );
-            }
+            $this->update_post_categories_by_id($post_id, $categories);
         } else {
             $this->error_log[] = sprintf(
                 __('Linha %d: Nenhum post encontrado para a URL: %s', FU_TEXT_DOMAIN),
                 $this->row_num,
                 esc_url($url)
+            );
+        }
+    }
+
+    /**
+     * Atualiza as categorias de um post a partir do ID.
+     *
+     * @param int   $post_id
+     * @param array $categories
+     */
+    private function update_post_categories_by_id($post_id, $categories) {
+        if ($post_id <= 0) {
+            $this->error_log[] = sprintf(
+                __('Linha %d: ID de post inválido: %s', FU_TEXT_DOMAIN),
+                $this->row_num,
+                esc_html($post_id)
+            );
+            return;
+        }
+
+        $post = get_post($post_id);
+        if ($post) {
+            $category_ids = array();
+
+            foreach ($categories as $category_name) {
+                $category_id = $this->get_or_create_category($category_name);
+                if ($category_id) {
+                    $category_ids[] = $category_id;
+                }
+            }
+
+            if (!empty($category_ids)) {
+                wp_set_post_categories($post_id, $category_ids, false);
+                $this->success_count++;
+            }
+        } else {
+            $this->error_log[] = sprintf(
+                __('Linha %d: Post com ID %d não encontrado.', FU_TEXT_DOMAIN),
+                $this->row_num,
+                $post_id
             );
         }
     }
